@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    {% load static %}
+    {% load bootstrap4 %}
+    <meta charset="utf-8">
+    <title>HTML Sudoku Board</title>
+    {% include "bootstrap.html" %}
+    <link rel="stylesheet" href="{% static 'sudoku.css' %}?v=1.01" />
+    <script src="{% static 'sudoku.js' %}"></script>
+</head>
+
+<body onload="initBoard()">
+    {% include "navigation.html" %}
+    <div class="container">
+        <h1 class="text-center">HTML Sudoku Board</h1>
+        <div class="text-center">
+            <div style="display: inline-block;">
+                <!-- Sudoku Table -->
+                <table id="t1" border="1" class="table-responsive">
+                    {% for row in rows %}
+                    <tr>
+                        {% for name, value in row.items %}
+                        <td id="{{ name }}">
+                            {% if value == 0 %}
+                            &nbsp;
+                            {% else %}
+                            {{ value }}
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </table>
+                <!-- Form -->
+                <div class="jumbotron py-4">
+                    <form method="POST">
+                        {% csrf_token %}
+                        {% bootstrap_form sudoku_form %}
+                        <button type="submit" class="btn btn-primary" name="move">Move</button>
+                    </form>
+                    <form method="POST">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-primary" name="new_game">New Game</button>
+                    </form>
+                </div>
+            </div>
+            <br/>
+        </div>
+    </div>
+</body>
+
+</html>
