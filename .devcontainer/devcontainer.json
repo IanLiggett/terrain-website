@@ -1,10 +1,12 @@
 {
   "name": "Python 3.12 & Django 4.2",
-  "image": "mcr.microsoft.com/devcontainers/python:3.12-bullseye",
-  "postCreateCommand": "pip install -r .devcontainer/requirements.txt",
-  "features": {
-    "docker-in-docker": "latest"
+  "build": {
+    "dockerfile": "Dockerfile"
   },
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+  "postCreateCommand": "pip install -r requirements.txt",
   "customizations": {
     "vscode": {
       "extensions": [
@@ -15,8 +17,13 @@
   },
   "portsAttributes": {
     "8000": {
-      "label": "Django App",
+      "label": "gunicorn",
+      "onAutoForward": "openBrowser"
+    },
+    "80": {
+      "label": "nginx",
       "onAutoForward": "openBrowser"
     }
+
   }
 }
