@@ -29,7 +29,11 @@ SECRET_KEY = "django-insecure-#4(inwx(a#%+87a@j74ho6!ho+gm75ebgprk9=$fxs=of^lng8
 DEBUG = True
 
 ALLOWED_HOSTS = ['*']
-CSRF_TRUSTED_ORIGINS = ['https://localhost:8000']
+CSRF_TRUSTED_ORIGINS = [
+    'https://localhost:8000',
+    'https://localhost:80',
+    f"https://{os.getenv('CODESPACE_NAME')}-8000.github.dev"
+]
 
 # Application definition
 
@@ -119,4 +123,4 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = "static/"
-STATIC_FILES_DIRS = [ STATIC_DIR ]
+STATICFILES_DIRS = [ STATIC_DIR ]
