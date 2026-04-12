@@ -7,7 +7,11 @@ const neighborOffsets = [
     [1, 0],
     [-1, 0],
     [0, 1],
-    [0, -1]
+    [0, -1],
+    // [1, 1],
+    // [1, -1],
+    // [-1, 1],
+    // [-1, -1]
 ]
 
 // weights for when a drop deposits its sediment
@@ -22,7 +26,7 @@ const depositOffsets = [
 
 // converts (X, Y) to I
 function getIFromXY(x, y, planeWidth) {
-    return y * (planeWidth) + x;
+    return y * planeWidth + x;
 }
 
 // converts I to (X, Y)
@@ -40,8 +44,8 @@ function rngInRange(prng, min, max) {
 
 // finds the lowest neighbor and the delta height for a given node
 function getLowestNeighbor(x, y, z, position, planeWidth, planeHeight, prng) {
-    let lowestNeighbor;
-    let lowestDHeight = 100000000;
+    let lowestNeighbor = null;
+    let lowestDeltaHeight = 100000000;
 
     // iterate over neighbors
     for (const [dx, dy] of neighborOffsets) {
@@ -53,19 +57,18 @@ function getLowestNeighbor(x, y, z, position, planeWidth, planeHeight, prng) {
             continue;
         }
 
-        const nI = getIFromXY(nx, ny, planeWidth)
-        
+        const nI = getIFromXY(nx, ny, planeWidth);
+        const deltaHeight = position.getZ(nI) - z;
         // checks if neighbor is the lowest
-        const deltaHeight = position.getZ(nI) - z; //+ (prng() - 0.5) / 5;
-        if (deltaHeight < lowestDHeight) {
+        if (deltaHeight < lowestDeltaHeight) {
             lowestNeighbor = nI;
-            lowestDHeight = deltaHeight
+            lowestDeltaHeight = deltaHeight
         }
     }
 
     return {
         neighbor: lowestNeighbor,
-        deltaHeight: lowestDHeight
+        deltaHeight: lowestDeltaHeight
     };
 }
 
@@ -99,9 +102,9 @@ function calculateTerrainColors(geometry) {
             colors[i * 3 + 2] = 30 / 255;
         // green
         } else {
-            colors[i * 3] = 20 / 255;
-            colors[i * 3 + 1] = 172 / 255;
-            colors[i * 3 + 2] = 42 / 255;
+            colors[i * 3] = 89 / 255;
+            colors[i * 3 + 1] = 100 / 255;
+            colors[i * 3 + 2] = 41 / 255;
         }
     }
 
@@ -117,37 +120,31 @@ function erodeTerrain(geometry, prng) {
 
     // placeholder inputs, maybe allow user to input these via a form?
     // only issue with that is they're very sensitive, so easy to mess up the terrain on accident by changing these
-    const sizeRetention = 0.95;
+    const sizeRetention = 0.8;
+    const speedRetention = 0.9;
     const depositSpeed = 0.05;
     const erodeSpeed = 0.08;
     const erosionRadius = 3;
     const minCapacity = 0.1;
     const baseCapacity = 2;
-    const droplets = 200000;
+    const droplets = 100000;
     // simulate some number of droplets
     for (let droplet = 0; droplet < droplets; droplet++) {
         // initialize starting values for droplet
         let size = 5;
-        let speed = 5;
-        let x = rngInRange(prng, 0, planeWidth);
-        let y = rngInRange(prng, 0, planeHeight);
+        let speed = 100;
+        let x = rngInRange(prng, 0, planeWidth - 1);
+        let y = rngInRange(prng, 0, planeHeight - 1);
         let i = getIFromXY(x, y, planeWidth);
         let sediment = 0;
 
-        // console.log({ x, y, i, isIntegerX: Number.isInteger(x), isIntegerY: Number.isInteger(y), isIntegerI: Number.isInteger(i) });
-
         // step the droplet down 30 times, or until it stops "moving"
-        for (let time = 0; time < 30; time++) {
+        for (let time = 0; time < 50; time++) {
             // move to the lowest nearby neighbor
             const z = position.getZ(i);
             const {neighbor, deltaHeight} = getLowestNeighbor(x, y, z, position, planeWidth, planeHeight, prng);
 
             i = neighbor;
-            // only known remaining bug, i isn't an integer very occasionally for some reason
-            if (!Number.isInteger(i)) {
-                console.log("Bad currentIndex:", i);
-                break;
-            }
             ({x, y} = getXYFromI(i, planeWidth));
 
             // calculate the current capacity for the droplet (how much sediment it can hold)
@@ -170,10 +167,6 @@ function erodeTerrain(geometry, prng) {
                         continue;
                     }
 
-                    if (!Number.isInteger(getIFromXY(nx, ny, planeWidth))) {
-                        console.log("Bad currentIndex:", i);
-                        break;
-                    }
                     positionsArray[getIFromXY(nx, ny, planeWidth) * 3 + 2] += deposition * weight;
                 }
             // otherwise, erode by taking sediment from its surroundings and carrying it with it
@@ -204,13 +197,13 @@ function erodeTerrain(geometry, prng) {
             }
 
             // update speed based on delta height
-            speed = speed = Math.max(speed + (-deltaHeight), 0);
+            speed = Math.max(speed + (-deltaHeight), 0.1) * speedRetention;
             // decrease size of the droplet
             size *= sizeRetention;
 
-            if (speed < 0.01) {
-                break;
-            }
+            // if (speed < 0.01) {
+            //     break;
+            // }
         }
     }
 
@@ -218,14 +211,14 @@ function erodeTerrain(geometry, prng) {
 }
 
 // calculate the generic height map based on layers
-// currently hardcoded with a single layer's inputs
+// currently hardcoded with a couple layer's inputs
 function calculateTerrainNoise(geometry, noise2d) {
     const position = geometry.getAttribute("position");
 
     for (let i = 0; i < position.count; i++) {
         let x = position.getX(i);
         let y = position.getY(i);
-        let z = calculateNoise(noise2d, x, y, 0.1, 1, 4, 2, 0.5);
+        let z = calculateNoise(noise2d, x, y, 0.1, 1, 4, 2, 0.5) + calculateNoise(noise2d, x, y, 0.03, 2, 3, 2, 0.5);
 
         position.setXYZ(i, x, y, z);
     }
@@ -234,16 +227,15 @@ function calculateTerrainNoise(geometry, noise2d) {
 }
 
 // main function which creates the scene and renders terrain it requests
-// maybe not the place to create the scene object?
 function renderTerrain() {
     // create scene and camera
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.y = -5;
-    camera.position.z = 3;
+    camera.position.y = -15;
+    camera.position.z = 10;
 
     // orient camera towards center
-    camera.lookAt(new THREE.Vector3(0, -2, 0));
+    camera.lookAt(new THREE.Vector3(0, -2.2, 0));
 
     // create renderer and add it to the templated page
     const renderer = new THREE.WebGLRenderer();
@@ -265,7 +257,7 @@ function renderTerrain() {
     const noise2d = createNoise2D(prng);
 
     // create geometry and populate it with height map
-    const geometry = new THREE.PlaneGeometry(10, 10, 500, 500);
+    const geometry = new THREE.PlaneGeometry(40, 40, 500, 500);
     calculateTerrainNoise(geometry, noise2d);
     erodeTerrain(geometry, prng);
 
