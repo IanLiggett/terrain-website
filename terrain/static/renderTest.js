@@ -1,4 +1,5 @@
-import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
+import * as THREE from 'three';
+import { GLTFExporter } from "three/addons/exporters/GLTFExporter.js";
 import { createNoise2D } from 'https://cdn.jsdelivr.net/npm/simplex-noise@4.0.1/+esm';
 import Alea from 'https://cdn.jsdelivr.net/npm/alea@1.0.1/+esm';
 
@@ -273,5 +274,22 @@ function renderTerrain() {
     scene.add(heightMap);
 
     renderer.render(scene, camera);
+
+    // export scene in a file format commonly used that contains all the information about the scene
+    // exportSceneAsGLB(scene);
 }
 renderTerrain();
+
+function saveGLBData(data) {
+    const blob = new Blob([data], { type: 'text/plain' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = "test.glb";
+    link.click();
+}
+
+function exportSceneAsGLB(scene) {
+    const options = { binary: true };
+    const exporter = new GLTFExporter();
+    exporter.parse(scene, saveGLBData, null, options);
+}
