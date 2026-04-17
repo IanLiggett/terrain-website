@@ -3,6 +3,42 @@ import { GLTFExporter } from "three/addons/exporters/GLTFExporter.js";
 import { createNoise2D } from 'https://cdn.jsdelivr.net/npm/simplex-noise@4.0.1/+esm';
 import Alea from 'https://cdn.jsdelivr.net/npm/alea@1.0.1/+esm';
 
+const width = 500;
+const height = 500;
+
+const previewWidth = 400;
+const previewHeight = 400;
+
+// create scene and camera
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.y = -15;
+camera.position.z = 10;
+
+// orient camera towards center
+camera.lookAt(new THREE.Vector3(0, -2.2, 0));
+
+// create renderer and add it to the templated page
+const renderer = new THREE.WebGLRenderer();
+renderer.setSize(window.innerWidth / 2, window.innerHeight / 2);
+renderer.domElement.id = "renderWindow";
+renderer.domElement.classList.add("col-sm-6");
+document.getElementById("leftColumn").after(renderer.domElement);
+
+// create light, ambient for global visibility and a point light for shadows
+const light = new THREE.DirectionalLight(0xffffff, 2);
+light.position.set(5, 10, 10);
+scene.add(light);
+
+const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+scene.add(ambient);
+
+// create the canvas for the input layer preview and cache the imageData
+const previewCanvas = document.getElementById("renderPreview");
+const ctx = previewCanvas.getContext('2d');
+const imageData = ctx.createImageData(previewWidth, previewHeight);
+const previewData = imageData.data;
+
 // array for iterating over neighbors cleanly
 const neighborOffsets = [
     [1, 0],
@@ -81,6 +117,14 @@ function calculateNoise(noise2d, x, y, frequency, amplitude, octaves, lacunarity
         noise += noise2d(x * octFrequency, y * octFrequency) * (amplitude * persistance ** octave);
     }
     return noise;
+}
+
+function calculateExtremeNoise(amplitude, octaves, persistance, extreme) {
+    let extremeNoise = 0;
+    for (let octave = 0; octave < octaves; octave++) {
+        extremeNoise += extreme * (amplitude * persistance ** octave);
+    }
+    return extremeNoise;
 }
 
 // iterates over height map and uses the normals as slope to pick colors per vertex
@@ -202,9 +246,9 @@ function erodeTerrain(geometry, prng) {
             // decrease size of the droplet
             size *= sizeRetention;
 
-            // if (speed < 0.01) {
-            //     break;
-            // }
+            if (speed < 0.01) {
+                break;
+            }
         }
     }
 
@@ -217,9 +261,9 @@ function calculateTerrainNoise(geometry, noise2d) {
     const position = geometry.getAttribute("position");
 
     for (let i = 0; i < position.count; i++) {
-        let x = position.getX(i);
-        let y = position.getY(i);
-        let z = calculateNoise(noise2d, x, y, 0.1, 1, 4, 2, 0.5) + calculateNoise(noise2d, x, y, 0.03, 2, 3, 2, 0.5);
+        const x = position.getX(i);
+        const y = position.getY(i);
+        const z = calculateNoise(noise2d, x, y, 0.1, 1, 4, 2, 0.5) + calculateNoise(noise2d, x, y, 0.03, 2, 3, 2, 0.5);
 
         position.setXYZ(i, x, y, z);
     }
@@ -227,30 +271,8 @@ function calculateTerrainNoise(geometry, noise2d) {
     position.needsUpdate = true;
 }
 
-// main function which creates the scene and renders terrain it requests
+// main function which uses the scene to render the terrain
 function renderTerrain() {
-    // create scene and camera
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.y = -15;
-    camera.position.z = 10;
-
-    // orient camera towards center
-    camera.lookAt(new THREE.Vector3(0, -2.2, 0));
-
-    // create renderer and add it to the templated page
-    const renderer = new THREE.WebGLRenderer();
-    renderer.setSize(window.innerWidth / 2, window.innerHeight / 2);
-    document.body.appendChild(renderer.domElement);
-
-    // create light, ambient for global visibility and a point light for shadows
-    const light = new THREE.DirectionalLight(0xffffff, 2);
-    light.position.set(5, 10, 10);
-    scene.add(light);
-
-    const ambient = new THREE.AmbientLight(0xffffff, 0.5);
-    scene.add(ambient);
-
     // hardcoded seed
     const seed = 6;
     // initialize seeded random number generator and noise function
@@ -258,7 +280,7 @@ function renderTerrain() {
     const noise2d = createNoise2D(prng);
 
     // create geometry and populate it with height map
-    const geometry = new THREE.PlaneGeometry(40, 40, 500, 500);
+    const geometry = new THREE.PlaneGeometry(40, 40, width, height);
     calculateTerrainNoise(geometry, noise2d);
     erodeTerrain(geometry, prng);
 
@@ -279,6 +301,49 @@ function renderTerrain() {
     // exportSceneAsGLB(scene);
 }
 renderTerrain();
+
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+// layerId is a placeholder to grab the correct layer based on the layer form that changed
+// the hardcoded layer inputs are also a placeholder
+async function renderPreview(layerId) {
+    let frequency = 0.05;
+    let amplitude = 1;
+    let octaves = 4;
+    let lacunarity = 2;
+    let persistance = 0.8;
+    const max = calculateExtremeNoise(amplitude, octaves, persistance, 1);
+    const min = calculateExtremeNoise(amplitude, octaves, persistance, -1);
+
+    // the outer for loop and sleep are just a lazy stress test of the layer preview
+    // its not cheap to update it every frame, but it can do it
+    for (let t = 0; t < 100; t++) {
+        const seed = 6;
+        const prng = Alea(seed);
+        const noise2d = createNoise2D(prng);
+
+        for (let x = 0; x < previewWidth; x++) {
+            for (let y = 0; y < previewHeight; y++) {
+                const i = getIFromXY(x, y, previewWidth) * 4;
+                const z = calculateNoise(noise2d, x, y, frequency, amplitude, octaves, lacunarity, persistance);
+                const colorNoise = Math.floor((z - max) / (min - max) * 255);
+
+                previewData[i] = colorNoise;
+                previewData[i + 1] = colorNoise;
+                previewData[i + 2] = colorNoise;
+                previewData[i + 3] = 255;
+            }
+        }
+
+        ctx.putImageData(imageData, 0, 0);
+        await sleep(16);
+        frequency -= 0.0004;
+        // amplitude += 0.01;
+        lacunarity -= 0.01;
+        persistance -= 0.005;
+    }
+}
+renderPreview();
 
 function saveGLBData(data) {
     const blob = new Blob([data], { type: 'text/plain' });

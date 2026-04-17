@@ -1,0 +1,43 @@
+<html>
+    <head>
+        {% load static %}
+
+        <script type="importmap">
+            {
+                "imports": {
+                    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+                }
+            }
+        </script>
+        <link rel="stylesheet" href="{% static 'terrain.css' %}">
+        <script type="module" src="{% static 'terrain.js' %}"></script>
+        {% include "bootstrap.html" %}
+    </head>
+    <body>
+        {% include "navigation.html" %}
+        <div id="mainWindow" class="container-fluid">
+            <div class="row">
+                <div id="leftColumn" class="col-sm-3 vh-100 d-flex flex-column">
+                    <canvas id="renderPreview"></canvas>
+                    <div id="activeListFrame">
+                        <div class="p-3 bg-light">Active Layers</div>
+                        <div class="flex-grow-1 overflow-auto">
+                            <ul id="activeList" class="list-group">
+                                <li class="list-group-item">very real active input form</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div id="inactiveListFrame" class="col-sm-3 vh-100 d-flex flex-column">
+                    <div class="p-3 bg-light">In-active Layers</div>
+                    <div class="flex-grow-1 overflow-auto">
+                        <ul id="inactiveList" class="list-group">
+                            <li class="list-group-item">very real in-active input form</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>
