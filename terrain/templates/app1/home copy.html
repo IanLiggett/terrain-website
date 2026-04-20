@@ -14,20 +14,16 @@
         <script type="module" src="{% static 'terrain.js' %}"></script>
         {% include "bootstrap.html" %}
     </head>
-    <body>
-        <div id="mainWindow" class="container-fluid">
+    <body class="d-flex flex-column min-vh-100">
+        {% include "navigation.html" %}
+        <div id="mainWindow" class="container-fluid flex-grow-1">
             <div class="row g-0">
-                <div class="col-12">
-                    {% include "navigation.html" %}
-                </div>
-            </div>
-            <div id="contentRow" class="row g-0">
-                <div id="leftColumn" class="col-sm-3 d-flex flex-column">
+                <div id="leftColumn" class="col-sm-3 d-flex flex-column h-100">
                     <canvas id="renderPreview"></canvas>
-                    <div id="activeListFrame" class="d-flex flex-column">
+                    <div id="activeListFrame" class="d-flex flex-column h-100">
                         <div class="p-3 bg-light">Active Layers</div>
-                        <div id="activeListScroll" class="overflow-auto">
-                            <ul id="activeList" class="list-group flex-grow-1">
+                        <div class="flex-grow-1 overflow-auto">
+                            <ul id="activeList" class="list-group">
                                 <li class="list-group-item dropdown">
                                     <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenu2" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                         Layer name here
@@ -39,6 +35,10 @@
                                         </form>
                                     </div>
                                 </li>
+                                <li class="list-group-item">hi</li>
+                                <li class="list-group-item">hi</li>
+                                <li class="list-group-item">hi</li>
+                                <li class="list-group-item">hi</li>
                                 <li class="list-group-item">hi</li>
                                 <li class="list-group-item">hi</li>
                                 <li class="list-group-item">hi</li>

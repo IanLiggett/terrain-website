@@ -304,7 +304,7 @@ renderTerrain();
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-// layerId is a placeholder to grab the correct layer based on the layer form that changed
+// layerId is a placeholder to grab the correct layer based on the layer form that's being edited
 // the hardcoded layer inputs are also a placeholder
 async function renderPreview(layerId) {
     let frequency = 0.05;
@@ -338,7 +338,7 @@ async function renderPreview(layerId) {
         ctx.putImageData(imageData, 0, 0);
         await sleep(16);
         frequency -= 0.0004;
-        // amplitude += 0.01;
+        amplitude += 0.01;
         lacunarity -= 0.01;
         persistance -= 0.005;
     }
