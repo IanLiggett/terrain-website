@@ -21,37 +21,37 @@
                     {% include "navigation.html" %}
                 </div>
             </div>
-            <div id="contentRow" class="row g-0">
+            <div id="contentRow" class="row">
                 <div id="leftColumn" class="col-sm-3 d-flex flex-column">
                     <canvas id="renderPreview"></canvas>
                     <div id="activeListFrame" class="d-flex flex-column">
-                        <div class="p-3 bg-light">Active Layers</div>
+                        <div class="p-3 bg-light d-flex">
+                            <h3>Active Layers</h3>
+                            <button id="newInputLayerButton" class="btn btn-primary ml-auto">New Input Layer</button>
+                        </div>
                         <div id="activeListScroll" class="overflow-auto">
-                            <ul id="activeList" class="list-group flex-grow-1">
-                                <li class="list-group-item dropdown">
-                                    <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenu2" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                        Layer name here
-                                    </button>
-                                    <div class="dropdown-menu">
-                                        <form method="POST">
+                            <div id="activeList" class="flex-grow-1 accordion">
+                                <div class="card">
+                                    <div class="card-header d-flex row">
+                                        <button class="col-sm-1 btn btn-outline-danger">D</button>
+                                        <button id="inputLayerCardExpander" class="btn btn-secondary flex-grow-1" type="button" data-toggle="collapse" data-target="#collapse-layer1">Layer 1</button>
+                                        <button class="col-sm-2 btn btn-outline-secondary">REM</button>
+                                    </div>
+                                    <div id="collapse-layer1" class="collapse show">
+                                        <div class="card-body">
                                             {% csrf_token %}
                                             {% bootstrap_form input_layer_form %}
-                                        </form>
+                                        </div>
                                     </div>
-                                </li>
-                                <li class="list-group-item">hi</li>
-                                <li class="list-group-item">hi</li>
-                                <li class="list-group-item">hi</li>
-                                <li class="list-group-item">hi</li>
-                                <li class="list-group-item">hi</li>
-                            </ul>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div id="inactiveListFrame" class="col-sm-3 vh-100 d-flex flex-column">
+                <div id="inactiveListFrame" class="col-sm-3 d-flex flex-column">
                     <div class="p-3 bg-light">In-active Layers</div>
-                    <div class="flex-grow-1 overflow-auto">
-                        <ul id="inactiveList" class="list-group">
+                    <div id="inactiveListScroll" class="overflow-auto">
+                        <ul id="inactiveList" class="list-group flex-grow-1">
                             <li class="list-group-item">very real in-active input form</li>
                         </ul>
                     </div>

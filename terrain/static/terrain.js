@@ -317,31 +317,31 @@ async function renderPreview(layerId) {
 
     // the outer for loop and sleep are just a lazy stress test of the layer preview
     // its not cheap to update it every frame, but it can do it
-    for (let t = 0; t < 100; t++) {
-        const seed = 6;
-        const prng = Alea(seed);
-        const noise2d = createNoise2D(prng);
+    // for (let t = 0; t < 100; t++) {
+    const seed = 6;
+    const prng = Alea(seed);
+    const noise2d = createNoise2D(prng);
 
-        for (let x = 0; x < previewWidth; x++) {
-            for (let y = 0; y < previewHeight; y++) {
-                const i = getIFromXY(x, y, previewWidth) * 4;
-                const z = calculateNoise(noise2d, x, y, frequency, amplitude, octaves, lacunarity, persistance);
-                const colorNoise = Math.floor((z - max) / (min - max) * 255);
+    for (let x = 0; x < previewWidth; x++) {
+        for (let y = 0; y < previewHeight; y++) {
+            const i = getIFromXY(x, y, previewWidth) * 4;
+            const z = calculateNoise(noise2d, x, y, frequency, amplitude, octaves, lacunarity, persistance);
+            const colorNoise = Math.floor((z - max) / (min - max) * 255);
 
-                previewData[i] = colorNoise;
-                previewData[i + 1] = colorNoise;
-                previewData[i + 2] = colorNoise;
-                previewData[i + 3] = 255;
-            }
+            previewData[i] = colorNoise;
+            previewData[i + 1] = colorNoise;
+            previewData[i + 2] = colorNoise;
+            previewData[i + 3] = 255;
         }
-
-        ctx.putImageData(imageData, 0, 0);
-        await sleep(16);
-        frequency -= 0.0004;
-        amplitude += 0.01;
-        lacunarity -= 0.01;
-        persistance -= 0.005;
     }
+
+    ctx.putImageData(imageData, 0, 0);
+    //     await sleep(16);
+    //     frequency -= 0.0004;
+    //     amplitude += 0.01;
+    //     lacunarity -= 0.01;
+    //     persistance -= 0.005;
+    // }
 }
 renderPreview();
 

@@ -1,0 +1,11 @@
+<div class="card">
+    <div class="card-header">
+        <button class="btn btn-secondary" type="button" data-toggle="collapse" data-target="#collapse-layer1">Layer 1</button>
+    </div>
+    <div id="collapse-layer1" class="collapse show">
+        <div class="card-body">
+            {% csrf_token %}
+            {% bootstrap_form input_layer_form %}
+        </div>
+    </div>
+</div>

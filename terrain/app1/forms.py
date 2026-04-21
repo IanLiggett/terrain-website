@@ -1,69 +1,62 @@
 from django import forms
 from django.core import validators
 from django.contrib.auth.models import User
+from .models import InputLayer
 
-class InputLayerForm(forms.Form):
-    frequency = forms.FloatField(
-        min_value=0.001,
-        max_value=1,
-        initial=0.1,
-        widget=forms.NumberInput(attrs={
-            "type":"range",
-            "min":"0.001",
-            "max":"1",
-            "step":"0.001",
-            "class":"form-range"
-        })
-    )
-    amplitude = forms.FloatField(
-        min_value=0.01,
-        max_value=10,
-        initial=1,
-        widget=forms.NumberInput(attrs={
-            "type":"range",
-            "min":"0.01",
-            "max":"10",
-            "step":"0.01",
-            "class":"form-range"
-        })
-    )
-    octaves = forms.IntegerField(
-        min_value=1,
-        max_value=5,
-        initial=3,
-        widget=forms.NumberInput(attrs={
-            "type":"range",
-            "min":"1",
-            "max":"5",
-            "step":"1",
-            "class":"form-range"
-        })
-    )
-    lacunarity = forms.FloatField(
-        min_value=0.01,
-        max_value=3,
-        initial=2,
-        widget=forms.NumberInput(attrs={
-            "type":"range",
-            "min":"0.01",
-            "max":"3",
-            "step":"0.01",
-            "class":"form-range"
-        })
-    )
-    persistance = forms.FloatField(
-        min_value=0.01,
-        max_value=3,
-        initial=0.5,
-        widget=forms.NumberInput(attrs={
-            "type":"range",
-            "min":"0.01",
-            "max":"3",
-            "step":"0.01",
-            "class":"form-range"
-        })
-    )
-
+class InputLayerForm(forms.ModelForm):
+    class Meta:
+        model = InputLayer
+        fields = ["name", "frequency", "amplitude", "octaves", "lacunarity", "persistence"]
+        widgets = {
+            # "name": forms.CharField(
+            #     label="name",
+            #     widget=forms.TextInput(attrs={
+            #         "class": "form-control",
+            #         "placeholder": "Enter name here",
+            #         "id": "layerNameInput"
+            #     })
+            # ),
+            "name": forms.TextInput(attrs={
+                "class": "form-control",
+                "placeholder": "Enter name here",
+                "id": "layerNameInput"
+            }),
+            "frequency": forms.NumberInput(attrs={
+                "type": "range",
+                "min": "0.001",
+                "max": "1",
+                "step": "0.001",
+                "class": "form-range",
+            }),
+            "amplitude": forms.NumberInput(attrs={
+                "type": "range",
+                "min": "0.01",
+                "max": "10",
+                "step": "0.01",
+                "class": "form-range",
+            }),
+            "octaves": forms.NumberInput(attrs={
+                "type": "range",
+                "min": "1",
+                "max": "5",
+                "step": "1",
+                "class": "form-range",
+            }),
+            "lacunarity": forms.NumberInput(attrs={
+                "type": "range",
+                "min": "0.01",
+                "max": "3",
+                "step": "0.01",
+                "class": "form-range",
+            }),
+            "persistence": forms.NumberInput(attrs={
+                "type": "range",
+                "min": "0.01",
+                "max": "3",
+                "step": "0.01",
+                "class": "form-range",
+            }),
+        }
 
 class JoinForm(forms.ModelForm):
     password = forms.CharField(widget=forms.PasswordInput(attrs={'autocomplete': 'new-password'}))
