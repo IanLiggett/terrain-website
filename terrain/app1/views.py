@@ -8,6 +8,7 @@ from app1.forms import JoinForm, LoginForm, InputLayerForm
 
 @login_required(login_url='/login/')
 def home(request):
+    # 
     return render(request, 'app1/home.html', {'input_layer_form': InputLayerForm})
 
 def join(request):

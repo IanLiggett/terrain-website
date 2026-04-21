@@ -1,8 +1,18 @@
+<!-- 
+ inputLayerCardExpander's data-target needs to be set to "#collapse-[layer_id]"
+ the card body wrapper needs its id to be set to "collapse-[layer_id]"
+ An event to capture any changes at all to call a client js function to update the render preview/local copy needs to be attached to every slider + name text box
+ An event to capture when the user has stopped making changes (changed event for slider, focus lost for text box) to submit the form to the server to update its copy of the data 
+ need to be attached to every slider + name text box as well.
+ I just separated this card (input layer) as an example, not sure what the best way to load it on the server and inserting all these things before returning it to the client is.
+-->
 <div class="card">
-    <div class="card-header">
-        <button class="btn btn-secondary" type="button" data-toggle="collapse" data-target="#collapse-layer1">Layer 1</button>
+    <div class="card-header d-flex row">
+        <button class="col-sm-1 btn btn-outline-danger">D</button>
+        <button id="inputLayerCardExpander" class="btn btn-secondary flex-grow-1" type="button" data-toggle="collapse" data-target="">Layer 1</button>
+        <button class="col-sm-2 btn btn-outline-secondary">REM</button>
     </div>
-    <div id="collapse-layer1" class="collapse show">
+    <div id="" class="collapse show">
         <div class="card-body">
             {% csrf_token %}
             {% bootstrap_form input_layer_form %}
