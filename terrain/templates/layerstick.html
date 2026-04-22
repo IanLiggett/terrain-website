@@ -1,7 +1,7 @@
-<div class="">
-    <form action="POST">
-        <span>{{ layer.name }}</span>
-        <button type="button" class="btn btn-sm btn-primary move-to-active-btn" data-layer-id="{{ layer.id }}">
+<div class="bg-light border border-secondary row align-items-center mx-0">
+    <h3 class="col-sm-3 mb-0">{{ layer.name }}</h3>
+    <form class="col-sm-9 m-0 text-right" method="POST">
+        <button type="button" class="flex-grow-1 btn btn-sm btn-secondary move-to-active-btn" data-layer-id="{{ layer.id }}">
             Activate
         </button>
     </form>
