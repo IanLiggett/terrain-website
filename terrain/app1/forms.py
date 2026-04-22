@@ -8,14 +8,6 @@ class InputLayerForm(forms.ModelForm):
         model = InputLayer
         fields = ["name", "frequency", "amplitude", "octaves", "lacunarity", "persistence"]
         widgets = {
-            # "name": forms.CharField(
-            #     label="name",
-            #     widget=forms.TextInput(attrs={
-            #         "class": "form-control",
-            #         "placeholder": "Enter name here",
-            #         "id": "layerNameInput"
-            #     })
-            # ),
             "name": forms.TextInput(attrs={
                 "class": "form-control",
                 "placeholder": "Enter name here",

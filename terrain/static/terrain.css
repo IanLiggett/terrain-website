@@ -35,43 +35,15 @@ body {
     flex: 0 0 auto;
 }
 
-#activeListFrame {
+#activeListFrame, #allListFrame {
     display: flex;
     flex-direction: column;
     flex: 1 1 auto;
     min-height: 0;
 }
 
-#activeListScroll {
+#activeListScroll, #allListScroll {
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
-}
-
-#inputLayerCardExpander {
-    
-}
-
-/* #newInputLayerButton {
-    margin-left: auto;
-} */
-
-/* html, body {
-    height: 100%;
-    margin: 0;
-    padding: 0;
-    overflow-x: hidden;
-} */
-
-/* body {
-    position: fixed;
-    width: 100%;
-} */
-
-/* #mainWindow {
-    height: calc(100vh - 56px); */
-    /* height: 100vh; */
-    /* padding: 0;
-    margin: 0;
-    background-color: rgb(255, 244, 231);
 }

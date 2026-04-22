@@ -25,35 +25,36 @@
                 <div id="leftColumn" class="col-sm-3 d-flex flex-column">
                     <canvas id="renderPreview"></canvas>
                     <div id="activeListFrame" class="d-flex flex-column">
-                        <div class="p-3 bg-light d-flex">
-                            <h3>Active Layers</h3>
-                            <button id="newInputLayerButton" class="btn btn-primary ml-auto">New Input Layer</button>
+                        <div class="p-3 bg-light d-flex align-items-center">
+                            <h3 class="mb-0">Active Layers</h3>
+                            <form id="newInputLayerForm" class="m-0 ml-auto">
+                                {% csrf_token %}
+                                <button id="newInputLayerButton" type="submit" class="btn btn-primary">
+                                    New Input Layer
+                                </button>
+                            </form>
                         </div>
                         <div id="activeListScroll" class="overflow-auto">
                             <div id="activeList" class="flex-grow-1 accordion">
-                                <div class="card">
-                                    <div class="card-header d-flex row">
-                                        <button class="col-sm-1 btn btn-outline-danger">D</button>
-                                        <button id="inputLayerCardExpander" class="btn btn-secondary flex-grow-1" type="button" data-toggle="collapse" data-target="#collapse-layer1">Layer 1</button>
-                                        <button class="col-sm-2 btn btn-outline-secondary">REM</button>
-                                    </div>
-                                    <div id="collapse-layer1" class="collapse show">
-                                        <div class="card-body">
-                                            {% csrf_token %}
-                                            {% bootstrap_form input_layer_form %}
-                                        </div>
-                                    </div>
-                                </div>
+                                {% for layer_data in layer_forms %}
+                                     {% if layer_data.tracked %}
+                                        {% include "layercard.html" with layer=layer_data.layer input_layer_form=layer_data.input_layer_form %}
+                                     {% endif %}
+                                {% endfor %}
                             </div>
                         </div>
                     </div>
                 </div>
-                <div id="inactiveListFrame" class="col-sm-3 d-flex flex-column">
-                    <div class="p-3 bg-light">In-active Layers</div>
-                    <div id="inactiveListScroll" class="overflow-auto">
-                        <ul id="inactiveList" class="list-group flex-grow-1">
-                            <li class="list-group-item">very real in-active input form</li>
-                        </ul>
+                <div id="allListFrame" class="col-sm-3 d-flex flex-column">
+                    <div class="p-3 bg-light d-flex">
+                        <h3>All Layers</h3>
+                    </div>
+                    <div id="allListScroll" class="overflow-auto">
+                        <div id="allList" class="flex-grow-1 accordion">
+                            {% for layer_data in layer_forms %}
+                                {% include "layerstick.html" with layer=layer_data.layer %}
+                            {% endfor %}
+                        </div>
                     </div>
                 </div>
             </div>

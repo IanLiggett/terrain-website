@@ -1,15 +1,77 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
-from django.http import HttpResponse
+from django.http import JsonResponse, HttpResponse, HttpResponseBadRequest
 from django.contrib.auth.decorators import login_required
+from django.template.loader import render_to_string
 from app1.forms import JoinForm, LoginForm, InputLayerForm
+from app1.models import Profile, InputLayer
 
 # Create your views here.
 
+@login_required(login_url="/login/")
+def activate_layer(request):
+    if request.method != "POST":
+        return HttpResponseBadRequest("POST required")
+
+    layer_id = request.POST.get("layer_id")
+    layer = get_object_or_404(InputLayer, pk=layer_id, user=request.user)
+    if request.user.profile.tracked_layers.filter(pk=layer.pk).exists():
+        return JsonResponse({"ok": False, "error": "Layer already active"}, status=400)
+    
+    request.user.profile.tracked_layers.add(layer)
+
+    return render(
+        request,
+        "layercard.html",
+        {"layer": layer, "input_layer_form": InputLayerForm(instance=layer)}
+    )
+
+@login_required(login_url="/login/")
+def create_input_layer(request):
+    if request.method != "POST":
+        return HttpResponse(status=405)
+    
+    layer = InputLayer.objects.create(user=request.user)
+    # layers are tracked by default upon creation
+    request.user.profile.tracked_layers.add(layer)
+
+    layer_card = render_to_string(
+        "layercard.html",
+        {"layer": layer, "input_layer_form": InputLayerForm(instance=layer)},
+        request=request
+    )
+    
+    layer_stick = render_to_string(
+        "layerstick.html",
+        {"layer": layer},
+        request=request
+    )
+
+    return JsonResponse({
+        "ok": True,
+        "layer_id": layer.pk,
+        "layer_card": layer_card,
+        "layer_stick": layer_stick
+    })
+
 @login_required(login_url='/login/')
 def home(request):
-    # 
-    return render(request, 'app1/home.html', {'input_layer_form': InputLayerForm})
+    tracked_ids = set(request.user.profile.tracked_layers.values_list("pk", flat=True))
+    input_layers = request.user.inputlayer_set.all()
+    
+    layer_forms = []
+    for layer in input_layers:
+        layer_data = {
+            "layer": layer,
+            "tracked": False
+        }
+        if layer.pk in tracked_ids:
+            layer_data["input_layer_form"] = InputLayerForm(instance=layer, prefix=f"layer-{layer.id}")
+            layer_data["tracked"] = True
+
+        layer_forms.append(layer_data)
+
+    return render(request, "app1/home.html", {"layer_forms": layer_forms})
 
 def join(request):
     if (request.method == "POST"):
@@ -21,6 +83,10 @@ def join(request):
             user.set_password(user.password)
             # Save encrypted password to DB
             user.save()
+
+            # Create user profile
+            Profile.objects.create(user=user)
+
             # Success! Redirect to home page.
             return redirect("/")
         else:

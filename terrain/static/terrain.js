@@ -358,3 +358,58 @@ function exportSceneAsGLB(scene) {
     const exporter = new GLTFExporter();
     exporter.parse(scene, saveGLBData, null, options);
 }
+
+const newInputLayerForm = document.getElementById("newInputLayerForm");
+const activeLayersList = document.getElementById("activeList");
+const allLayersList = document.getElementById("allList");
+const globcsrfToken = document.querySelector("[name=csrfmiddlewaretoken]").value;
+
+newInputLayerForm.addEventListener("submit", async function(event) {
+    event.preventDefault();
+
+    // const formData = new FormData(newInputLayerForm);
+    const csrfToken = newInputLayerForm.querySelector("[name=csrfmiddlewaretoken]").value;
+
+    const response = await fetch("createlayer/", {
+      method: "POST",
+      headers: {
+        "X-CSRFToken": csrfToken,
+      },
+      credentials: "same-origin",
+    });
+
+    if (!response.ok) {
+        throw new Error(`Server returned ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    activeLayersList.insertAdjacentHTML("beforeend", data.layer_card);
+    allLayersList.insertAdjacentHTML("beforeend", data.layer_stick);
+});
+
+allLayersList.addEventListener("click", async function (event) {
+    const button = event.target.closest(".move-to-active-btn");
+    if (!button) return;
+
+    const formData = new FormData();
+    formData.append("layer_id", button.dataset.layerId);
+
+    const response = await fetch("activatelayer/", {
+      method: "POST",
+      body: formData,
+      headers: {
+        "X-CSRFToken": globcsrfToken,
+      },
+      credentials: "same-origin",
+    });
+
+    const data = await response.json();
+    if (!response.ok || !data.ok) {
+    console.error("Failed to activate layer: " + (data.error || "Unknown error"));
+    return;
+    }
+
+    const layercard = await response.text();
+    activeLayersList.insertAdjacentHTML("afterbegin", layercard);
+});
