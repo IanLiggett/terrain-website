@@ -28,4 +28,6 @@ urlpatterns = [
     path('logout/', app1_views.user_logout),
     path('createlayer/', app1_views.create_input_layer),
     path('activatelayer/', app1_views.activate_layer),
+    path('deactivatelayer/', app1_views.deactivate_layer),
+    path('deletelayer/', app1_views.delete_layer),
 ]

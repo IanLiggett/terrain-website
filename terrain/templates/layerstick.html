@@ -1,8 +1,12 @@
-<div class="bg-light border border-secondary row align-items-center mx-0">
+<div id="layer-stick-{{ layer.id }}" class="bg-light border border-secondary row align-items-center mx-0">
     <h3 class="col-sm-3 mb-0">{{ layer.name }}</h3>
     <form class="col-sm-9 m-0 text-right" method="POST">
-        <button type="button" class="flex-grow-1 btn btn-sm btn-secondary move-to-active-btn" data-layer-id="{{ layer.id }}">
-            Activate
+        <button
+            type="button"
+            class="toggle-layer-btn btn {% if is_active %}btn-success{% else %}btn-outline-secondary{% endif %}"
+            data-layer-id="{{ layer.id }}"
+            data-active="{% if is_active %}1{% else %}0{% endif %}">
+            {% if is_active %}Deactivate{% else %}Activate{% endif %}
         </button>
     </form>
 </div>

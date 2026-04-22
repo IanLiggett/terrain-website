@@ -359,6 +359,8 @@ function exportSceneAsGLB(scene) {
     exporter.parse(scene, saveGLBData, null, options);
 }
 
+
+
 const newInputLayerForm = document.getElementById("newInputLayerForm");
 const activeLayersList = document.getElementById("activeList");
 const allLayersList = document.getElementById("allList");
@@ -367,7 +369,6 @@ const globcsrfToken = document.querySelector("[name=csrfmiddlewaretoken]").value
 newInputLayerForm.addEventListener("submit", async function(event) {
     event.preventDefault();
 
-    // const formData = new FormData(newInputLayerForm);
     const csrfToken = newInputLayerForm.querySelector("[name=csrfmiddlewaretoken]").value;
 
     const response = await fetch("createlayer/", {
@@ -379,37 +380,102 @@ newInputLayerForm.addEventListener("submit", async function(event) {
     });
 
     if (!response.ok) {
-        throw new Error(`Server returned ${response.status}`);
+        console.error("Failed to create new input layer: " + response.status)
+        return;
     }
 
     const data = await response.json();
 
-    activeLayersList.insertAdjacentHTML("beforeend", data.layer_card);
-    allLayersList.insertAdjacentHTML("beforeend", data.layer_stick);
+    activeLayersList.insertAdjacentHTML("afterbegin", data.layer_card);
+    allLayersList.insertAdjacentHTML("afterbegin", data.layer_stick);
 });
 
-allLayersList.addEventListener("click", async function (event) {
-    const button = event.target.closest(".move-to-active-btn");
-    if (!button) return;
-
+async function request_layer_update(layer_id, url) {
     const formData = new FormData();
-    formData.append("layer_id", button.dataset.layerId);
+    formData.append("layer_id", layer_id);
 
-    const response = await fetch("activatelayer/", {
-      method: "POST",
-      body: formData,
-      headers: {
-        "X-CSRFToken": globcsrfToken,
-      },
-      credentials: "same-origin",
+    const response = await fetch(url, {
+        method: "POST",
+        body: formData,
+        headers: {
+            "X-CSRFToken": globcsrfToken,
+        },
+        credentials: "same-origin",
     });
 
-    const data = await response.json();
-    if (!response.ok || !data.ok) {
-    console.error("Failed to activate layer: " + (data.error || "Unknown error"));
-    return;
+    // const data = await response.json();
+    if (!response.ok) {
+        console.error("Failed to update layer: " + response.status);
+        return {"response": response, "success": false};
     }
 
-    const layercard = await response.text();
-    activeLayersList.insertAdjacentHTML("afterbegin", layercard);
+    return {"response": response, "success": true};
+}
+
+function is_active(button) {
+    return button.dataset.active === "1"
+}
+
+async function set_layer_active(button) {
+    const layer_id = button.dataset.layerId;
+
+    const {response, success} = await request_layer_update(layer_id, "activatelayer/");
+    if (!success) return;
+
+    const data = await response.json();
+
+    activeLayersList.insertAdjacentHTML("afterbegin", data.layer_card);
+    const layer_stick_element = allLayersList.querySelector("#layer-stick-" + String(layer_id));
+    if (layer_stick_element) {
+        layer_stick_element.outerHTML = data.layer_stick;
+    }
+}
+
+async function set_layer_inactive(button) {
+    const layer_id = button.dataset.layerId;
+
+    const {response, success} = await request_layer_update(layer_id, "deactivatelayer/");
+    if (!success) return;
+
+    const layer_stick = await response.text();
+    activeLayersList.querySelector("#layer-card-" + String(layer_id))?.remove();
+    const layer_stick_element = allLayersList.querySelector("#layer-stick-" + String(layer_id));
+    if (layer_stick_element) {
+        layer_stick_element.outerHTML = layer_stick;
+    }
+}
+
+allLayersList.addEventListener("click", async function(event) {
+    const button = event.target.closest(".toggle-layer-btn");
+    if (!button) return;
+
+    if (is_active(button)) {
+        set_layer_inactive(button);
+    } else {
+        set_layer_active(button);
+    }
 });
+
+async function delete_layer(button) {
+    const layer_id = button.dataset.layerId;
+
+    const {response, success} = await request_layer_update(layer_id, "deletelayer/");
+    if (!success) return;
+
+    activeLayersList.querySelector("#layer-card-" + String(layer_id))?.remove();
+    allLayersList.querySelector("#layer-stick-" + String(layer_id))?.remove();
+}
+
+activeLayersList.addEventListener("click", async function(event) {
+    const setInactiveButton = event.target.closest(".move-to-inactive-btn");
+    if (setInactiveButton) {
+        set_layer_inactive(setInactiveButton);
+        return;
+    }
+
+    const deleteLayerButton = event.target.closest(".delete-layer-btn");
+    if (deleteLayerButton) {
+        delete_layer(deleteLayerButton);
+        return;
+    }
+})

@@ -1,11 +1,11 @@
 {% load bootstrap4 %}
-<div class="card">
+<div id="layer-card-{{layer.id}}" class="card">
     <div class="card-header d-flex row">
-        <button class="col-sm-1 btn btn-outline-danger">D</button>
+        <button class="delete-layer-btn col-sm-1 btn btn-outline-danger" data-layer-id="{{ layer.id }}">D</button>
         <button class="btn btn-secondary flex-grow-1" type="button" data-toggle="collapse" data-target="#collapse-{{ layer.id }}">
             {{ layer.name }}
         </button>
-        <button class="col-sm-2 btn btn-outline-secondary">REM</button>
+        <button class="move-to-inactive-btn col-sm-2 btn btn-outline-secondary" data-layer-id="{{ layer.id }}">REM</button>
     </div>
     <div id="collapse-{{ layer.id }}" class="collapse show">
         <div class="card-body">

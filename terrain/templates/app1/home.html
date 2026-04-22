@@ -37,7 +37,7 @@
                         <div id="activeListScroll" class="overflow-auto">
                             <div id="activeList" class="flex-grow-1 accordion">
                                 {% for layer_data in layer_forms %}
-                                     {% if layer_data.tracked %}
+                                     {% if layer_data.is_active %}
                                         {% include "layercard.html" with layer=layer_data.layer input_layer_form=layer_data.input_layer_form %}
                                      {% endif %}
                                 {% endfor %}
@@ -52,7 +52,7 @@
                     <div id="allListScroll" class="overflow-auto">
                         <div id="allList" class="flex-grow-1 accordion">
                             {% for layer_data in layer_forms %}
-                                {% include "layerstick.html" with layer=layer_data.layer %}
+                                {% include "layerstick.html" with layer=layer_data.layer is_active=layer_data.is_active %}
                             {% endfor %}
                         </div>
                     </div>
