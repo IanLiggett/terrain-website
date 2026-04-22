@@ -3,15 +3,25 @@ import { GLTFExporter } from "three/addons/exporters/GLTFExporter.js";
 import { createNoise2D } from 'https://cdn.jsdelivr.net/npm/simplex-noise@4.0.1/+esm';
 import Alea from 'https://cdn.jsdelivr.net/npm/alea@1.0.1/+esm';
 
-const width = 500;
-const height = 500;
+const middle_column = document.getElementById("middleColumn");
+
+function render_window_size() {
+    return {"window_width": middle_column.clientWidth, "window_height": middle_column.clientHeight / 2};
+}
+function camera_perspective() {
+    const {window_width, window_height} = render_window_size();
+    return window_width / window_height;
+}
+
+const terrain_width = 500;
+const terrain_height = 500;
 
 const previewWidth = 400;
 const previewHeight = 400;
 
 // create scene and camera
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+const camera = new THREE.PerspectiveCamera(75, camera_perspective(), 0.1, 1000);
 camera.position.y = -15;
 camera.position.z = 10;
 
@@ -20,10 +30,22 @@ camera.lookAt(new THREE.Vector3(0, -2.2, 0));
 
 // create renderer and add it to the templated page
 const renderer = new THREE.WebGLRenderer();
-renderer.setSize(window.innerWidth / 2, window.innerHeight / 2);
 renderer.domElement.id = "renderWindow";
-renderer.domElement.classList.add("col-sm-6");
-document.getElementById("leftColumn").after(renderer.domElement);
+middle_column.prepend(renderer.domElement);
+
+function resize_render_window() {
+    const {window_width, window_height} = render_window_size();
+
+    renderer.setSize(window_width, window_height, false);
+    camera.aspect = window_width / window_height;
+    camera.updateProjectionMatrix();
+    renderer.render(scene, camera);
+}
+
+// size renderer to current frame and listen for changes
+resize_render_window();
+const observer = new ResizeObserver(resize_render_window);
+observer.observe(middle_column);
 
 // create light, ambient for global visibility and a point light for shadows
 const light = new THREE.DirectionalLight(0xffffff, 2);
@@ -38,6 +60,8 @@ const previewCanvas = document.getElementById("renderPreview");
 const ctx = previewCanvas.getContext('2d');
 const imageData = ctx.createImageData(previewWidth, previewHeight);
 const previewData = imageData.data;
+
+const activeLayers = {};
 
 // array for iterating over neighbors cleanly
 const neighborOffsets = [
@@ -280,7 +304,7 @@ function renderTerrain() {
     const noise2d = createNoise2D(prng);
 
     // create geometry and populate it with height map
-    const geometry = new THREE.PlaneGeometry(40, 40, width, height);
+    const geometry = new THREE.PlaneGeometry(40, 40, terrain_width, terrain_height);
     calculateTerrainNoise(geometry, noise2d);
     erodeTerrain(geometry, prng);
 
@@ -414,6 +438,14 @@ async function request_layer_update(layer_id, url) {
 
 function is_active(button) {
     return button.dataset.active === "1"
+}
+
+function start_tracking_layer() {
+    
+}
+
+function stop_tracking_layer(layer_id) {
+    delete activeLayers[layer_id]
 }
 
 async function set_layer_active(button) {
