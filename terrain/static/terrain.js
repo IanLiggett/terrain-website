@@ -59,15 +59,6 @@ scene.add(light);
 const ambient = new THREE.AmbientLight(0xffffff, 0.5);
 scene.add(ambient);
 
-// create the canvas for the input layer preview and cache the imageData
-const previewCanvas = document.getElementById("renderPreview");
-previewCanvas.width = previewWidth;
-previewCanvas.height = previewHeight;
-
-const ctx = previewCanvas.getContext('2d');
-const imageData = ctx.createImageData(previewWidth, previewHeight);
-const previewData = imageData.data;
-
 const activeLayers = {};
 
 // array for iterating over neighbors cleanly
@@ -407,46 +398,27 @@ const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 // layerId is a placeholder to grab the correct layer based on the layer form that's being edited
 // the hardcoded layer inputs are also a placeholder
-async function renderPreview(layerId) {
-    let frequency = 0.05;
-    let amplitude = 1;
-    let octaves = 4;
-    let lacunarity = 2;
-    let persistance = 0.8;
-    const max = calculate_extreme_noise(amplitude, octaves, persistance, 1);
-    const min = calculate_extreme_noise(amplitude, octaves, persistance, -1);
+function renderPreview(canvas, params) {
+    const { frequency, amplitude, octaves, lacunarity, persistence } = params;
+    const max = calculate_extreme_noise(amplitude, octaves, persistence, 1);
+    const min = calculate_extreme_noise(amplitude, octaves, persistence, -1);
 
-    // the outer for loop and sleep are just a lazy stress test of the layer preview
-    // its not cheap to update it every frame, but it can do it
-    // for (let t = 0; t < 100; t++) {
-    const seed = 6;
-    const prng = Alea(seed);
+    const prng = Alea(6);
     const noise2d = createNoise2D(prng);
+    const imageData = canvas.getContext('2d').createImageData(previewWidth, previewHeight);
+    const data = imageData.data;
 
     for (let x = 0; x < previewWidth; x++) {
         for (let y = 0; y < previewHeight; y++) {
             const i = get_i_from_xy(x, y, previewWidth) * 4;
-            // const nx = (x / previewWidth) * (terrain_width_real * 100);
-            // const ny = (y / previewHeight) * (terrain_height_real * 100);
-            const z = calculate_noise(noise2d, x, y, frequency, amplitude, octaves, lacunarity, persistance);
-            const colorNoise = Math.floor((z - max) / (min - max) * 255);
-
-            previewData[i] = colorNoise;
-            previewData[i + 1] = colorNoise;
-            previewData[i + 2] = colorNoise;
-            previewData[i + 3] = 255;
+            const z = calculate_noise(noise2d, x, y, frequency, amplitude, octaves, lacunarity, persistence);
+            const v = Math.floor((z - max) / (min - max) * 255);
+            data[i] = data[i+1] = data[i+2] = v;
+            data[i+3] = 255;
         }
     }
-
-    ctx.putImageData(imageData, 0, 0);
-    //     await sleep(16);
-    //     frequency -= 0.0004;
-    //     amplitude += 0.01;
-    //     lacunarity -= 0.01;
-    //     persistance -= 0.005;
-    // }
+    canvas.getContext('2d').putImageData(imageData, 0, 0);
 }
-renderPreview();
 
 function saveGLBData(data) {
     const blob = new Blob([data], { type: 'text/plain' });
@@ -491,6 +463,7 @@ newInputLayerForm.addEventListener("submit", async function(event) {
 
     activeLayersList.insertAdjacentHTML("afterbegin", data.layer_card);
     allLayersList.insertAdjacentHTML("afterbegin", data.layer_stick);
+    initLayerCard(data.layer_id);
 });
 
 async function request_layer_update(layer_id, url) {
@@ -536,6 +509,7 @@ async function set_layer_active(button) {
     const data = await response.json();
 
     activeLayersList.insertAdjacentHTML("afterbegin", data.layer_card);
+    initLayerCard(data.layer_id);
     const layer_stick_element = allLayersList.querySelector("#layer-stick-" + String(layer_id));
     if (layer_stick_element) {
         layer_stick_element.outerHTML = data.layer_stick;
@@ -590,3 +564,46 @@ activeLayersList.addEventListener("click", async function(event) {
         return;
     }
 })
+
+function getLayerParams(form) {
+    const d = new FormData(form);
+    const p = `layer-${form.dataset.layerId}`;
+    return {
+        frequency:   parseFloat(d.get(`${p}-frequency`)),
+        amplitude:   parseFloat(d.get(`${p}-amplitude`)),
+        octaves:     parseInt(d.get(`${p}-octaves`)),
+        lacunarity:  parseFloat(d.get(`${p}-lacunarity`)),
+        persistence: parseFloat(d.get(`${p}-persistence`)),
+    };
+}
+
+function initLayerCard(layerId) {
+    const form = document.querySelector(`#layer-card-${layerId} form[data-layer-id]`);
+    const canvas = document.getElementById(`preview-${layerId}`);
+    if (!form || !canvas) return;
+    renderPreview(canvas, getLayerParams(form));
+}
+
+
+// Throttle via rAF — skip frames if one is already queued
+let rafPending = false;
+function throttledPreview(form, canvas) {
+    if (rafPending) return;
+    rafPending = true;
+    requestAnimationFrame(() => {
+        renderPreview(canvas, getLayerParams(form));
+        rafPending = false;
+    });
+}
+
+
+activeLayersList.addEventListener("input", function(event) {
+    const form = event.target.closest("form[data-layer-id]");
+    if (!form) return;
+    const canvas = document.getElementById(`preview-${form.dataset.layerId}`);
+    if (canvas) throttledPreview(form, canvas);
+});
+
+document.querySelectorAll("#activeList form[data-layer-id]").forEach(form => {
+    initLayerCard(form.dataset.layerId);
+});
