@@ -9,7 +9,11 @@
     </div>
     <div id="collapse-{{ layer.id }}" class="collapse show">
         <div class="card-body">
-            <form method="post">
+            <!-- Grey Scale preview -->
+            <canvas id="preview-{{layer.id}}" width="100" height="50"
+                style="width:100%; image-rendering:pixelated; display:block; margin-bottom:8px;">
+            </canvas>
+            <form method="post" data-layer-id="{{layer.id}}">
                 {% csrf_token %}
                 {% bootstrap_form input_layer_form %}
             </form>
