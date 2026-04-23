@@ -8,7 +8,7 @@ const middle_column = document.getElementById("middleColumn");
 const render_window_frame = document.getElementById("renderWindowFrame");
 
 function render_window_size() {
-    return {"window_width": middle_column.clientWidth, "window_height": middle_column.clientHeight / 2};
+    return {"window_width": render_window_frame.clientWidth, "window_height": middle_column.clientHeight / 2};
 }
 function camera_perspective() {
     const {window_width, window_height} = render_window_size();
@@ -50,7 +50,7 @@ function resize_render_window() {
 // size renderer to current frame and listen for changes
 resize_render_window();
 const observer = new ResizeObserver(resize_render_window);
-observer.observe(middle_column);
+observer.observe(render_window_frame);
 
 // create light, ambient for global visibility and a point light for shadows
 const light = new THREE.DirectionalLight(0xffffff, 2);
@@ -59,8 +59,6 @@ scene.add(light);
 
 const ambient = new THREE.AmbientLight(0xffffff, 0.5);
 scene.add(ambient);
-
-const activeLayers = {};
 
 // array for iterating over neighbors cleanly
 const neighbor_offsets = [
@@ -155,19 +153,23 @@ function get_lowest_neighbor(x, y, z, position, plane_width, plane_height, prng)
 }
 
 // calculates noise given layer parameters and a seeded noise generator
-function calculate_noise(noise2d, x, y, frequency, amplitude, octaves, lacunarity, persistance) {
+function calculate_noise(noise2d, x, y, frequency, amplitude, octaves, lacunarity, persistence) {
+    // if (Number.isNaN(x) || Number.isNaN(y) || Number.isNaN(frequency) || Number.isNaN(amplitude) || Number.isNaN(octaves) || Number.isNaN(lacunarity) || Number.isNaN(persistence)) {
+    //     console.log("Maybe NAN: ", x, y, frequency, amplitude, octaves, lacunarity, persistence)
+    // }
+
     let noise = 0;
     for (let octave = 0; octave < octaves; octave++) {
         const octFrequency = frequency * lacunarity ** octave;
-        noise += noise2d(x * octFrequency, y * octFrequency) * (amplitude * persistance ** octave);
+        noise += noise2d(x * octFrequency, y * octFrequency) * (amplitude * persistence ** octave);
     }
     return noise;
 }
 
-function calculate_extreme_noise(amplitude, octaves, persistance, extreme) {
+function calculate_extreme_noise(amplitude, octaves, persistence, extreme) {
     let extremeNoise = 0;
     for (let octave = 0; octave < octaves; octave++) {
-        extremeNoise += extreme * (amplitude * persistance ** octave);
+        extremeNoise += extreme * (amplitude * persistence ** octave);
     }
     return extremeNoise;
 }
@@ -343,10 +345,6 @@ function fill_depressions_with_water(geometry, colors) {
         const {x, y} = get_xy_from_i(ci, plane_width);
         const z = positions_array[ci * 3 + 2];
 
-        // colors[ciz - 2] = 255
-        // colors[ciz - 1] = 255
-        // colors[ciz] = 255
-        
         for (const [dx, dy] of neighbor_offsets) {
             const nx = x + dx;
             const ny = y + dy;
@@ -376,13 +374,17 @@ function fill_depressions_with_water(geometry, colors) {
 
 // calculate the generic height map based on layers
 // currently hardcoded with a couple layer's inputs
-function calculateTerrainNoise(geometry, noise2d) {
+function calculateTerrainNoise(layers, geometry, noise2d) {
     const position = geometry.getAttribute("position");
 
     for (let i = 0; i < position.count; i++) {
         const x = position.getX(i);
         const y = position.getY(i);
-        const z = calculate_noise(noise2d, x, y, 0.1, 1, 3, 2, 0.5) + calculate_noise(noise2d, x, y, 0.03, 2, 3, 2, 0.5);
+        // const z = calculate_noise(noise2d, x, y, 0.1, 1, 3, 2, 0.5) + calculate_noise(noise2d, x, y, 0.03, 2, 3, 2, 0.5);
+        let z = 0;
+        for (const layer of layers) {
+            z += calculate_noise(noise2d, x, y, layer.frequency, layer.amplitude, layer.octaves, layer.lacunarity, layer.persistence)
+        }
 
         position.setXYZ(i, x, y, z);
     }
@@ -391,44 +393,53 @@ function calculateTerrainNoise(geometry, noise2d) {
 }
 
 // main function which uses the scene to render the terrain
-function renderTerrain() {
-    // hardcoded seed
-    const seed = 12;
+let terrainMesh = null;
+const terrainMaterial = new THREE.MeshStandardMaterial({ vertexColors: true });
+
+function renderTerrain(layers, seed=12, erosion=true, water=true) {
+    set_render_button_inactive();
+
     // initialize seeded random number generator and noise function
     const prng = Alea(seed);
     const noise2d = createNoise2D(prng);
 
+    console.log("Layers: ", layers);
+
     // create geometry and populate it with height map
     const geometry = new THREE.PlaneGeometry(terrain_width_real, terrain_height_real, terrain_width, terrain_height);
-    calculateTerrainNoise(geometry, noise2d);
-    erode_terrain(geometry, prng);
+    calculateTerrainNoise(layers, geometry, noise2d);
+
+    // erosion!
+    if (erosion) erode_terrain(geometry, prng);
 
     // calculate normals and use that to determine color
     geometry.computeVertexNormals();
-    const material = new THREE.MeshStandardMaterial({ 
-        vertexColors: true
-    });
     const colors = calculate_terrain_colors(geometry);
-    fill_depressions_with_water(geometry, colors);
-    geometry.computeVertexNormals();
 
+    // water!
+    if (water) {
+        fill_depressions_with_water(geometry, colors);
+        // recalculate normals to fix water surface
+        geometry.computeVertexNormals();
+    }
+
+    // apply color
     geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
 
-    const heightMap = new THREE.Mesh(geometry, material);
-    heightMap.rotation.x = -Math.PI / 2;
-    scene.add(heightMap);
+    // create height map from calculated data and add it to scene
+    if (!terrainMesh) {
+        terrainMesh = new THREE.Mesh(geometry, terrainMaterial);
+        terrainMesh.rotation.x = -Math.PI / 2;
+        scene.add(terrainMesh);
+    } else {
+        terrainMesh.geometry.dispose();
+        terrainMesh.geometry = geometry;
+    }
 
     renderer.render(scene, camera);
-
-    // export scene in a file format commonly used that contains all the information about the scene
-    // exportSceneAsGLB(scene);
 }
-renderTerrain();
+// renderTerrain();
 
-const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
-// layerId is a placeholder to grab the correct layer based on the layer form that's being edited
-// the hardcoded layer inputs are also a placeholder
 function renderPreview(canvas, params) {
     const { frequency, amplitude, octaves, lacunarity, persistence } = params;
     const max = calculate_extreme_noise(amplitude, octaves, persistence, 1);
@@ -523,14 +534,6 @@ function is_active(button) {
     return button.dataset.active === "1"
 }
 
-function start_tracking_layer() {
-    
-}
-
-function stop_tracking_layer(layer_id) {
-    delete activeLayers[layer_id]
-}
-
 async function set_layer_active(button) {
     const layer_id = button.dataset.layerId;
 
@@ -596,6 +599,43 @@ activeLayersList.addEventListener("click", async function(event) {
     }
 })
 
+const renderButton = document.getElementById("renderButton");
+let button_active = true;
+
+function set_render_button_active() {
+    if (button_active) return;
+    button_active = true;
+
+    renderButton.removeAttribute("disabled");
+    renderButton.classList.remove("btn-secondary");
+    renderButton.classList.add("active");
+    renderButton.classList.add("btn-primary");
+}
+
+function set_render_button_inactive() {
+    if (!button_active) return;
+    button_active = false;
+
+    renderButton.setAttribute("disabled", true);
+    renderButton.classList.remove("btn-primary");
+    renderButton.classList.remove("active");
+    renderButton.classList.add("btn-secondary");
+}
+
+renderButton.addEventListener("click", async function(event) {
+    const layers = [];
+    for (const layer_card of activeLayersList.children) {
+        const form = layer_card.querySelector("form[data-layer-id]");
+        layers.push(getLayerParams(form));
+    }
+
+    renderTerrain(layers);
+});
+
+exportButton.addEventListener("click", async function() {
+    exportSceneAsGLB(scene);
+})
+
 function getLayerParams(form) {
     const d = new FormData(form);
     const p = `layer-${form.dataset.layerId}`;
@@ -649,6 +689,7 @@ function debouncedSave(form) {
 activeLayersList.addEventListener("input", function(event) {
     const form = event.target.closest("form[data-layer-id]");
     if (!form) return;
+    set_render_button_active();
     const canvas = document.getElementById(`preview-${form.dataset.layerId}`);
     if (canvas) throttledPreview(form, canvas);
     debouncedSave(form);

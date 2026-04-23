@@ -24,7 +24,6 @@
             </div>
             <div id="contentRow" class="row">
                 <div id="leftColumn" class="col-sm-3 d-flex flex-column">
-                    <canvas id="renderPreview" class=""></canvas>
                     <div id="activeListFrame" class="d-flex flex-column">
                         <div class="p-1 border border-primary bg-light rounded-top d-flex align-items-center">
                             <h3 class="mb-0">Active Layers</h3>
@@ -48,8 +47,11 @@
                 </div>
                 <div id="middleColumn" class="col-sm-6 d-flex flex-column">
                     <div id="renderWindowFrame">
-                        <button>
-                            
+                        <button id="renderButton" class="btn btn-primary active btn-lg">
+                            RENDER
+                        </button>
+                        <button id="exportButton" class="btn btn-secondary">
+                            EXPORT
                         </button>
                     </div>
                     <div class="jumbotron">
