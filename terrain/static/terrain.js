@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GLTFExporter } from "three/addons/exporters/GLTFExporter.js";
 import { createNoise2D } from 'https://cdn.jsdelivr.net/npm/simplex-noise@4.0.1/+esm';
 import Alea from 'https://cdn.jsdelivr.net/npm/alea@1.0.1/+esm';
+import { MinPriorityQueue, MaxPriorityQueue, PriorityQueue } from "https://esm.sh/@datastructures-js/priority-queue@6.3.5";
 
 const middle_column = document.getElementById("middleColumn");
 
@@ -13,11 +14,14 @@ function camera_perspective() {
     return window_width / window_height;
 }
 
-const terrain_width = 500;
-const terrain_height = 500;
+const terrain_width_real = 40;
+const terrain_height_real = 40;
 
-const previewWidth = 400;
-const previewHeight = 400;
+const terrain_width = 750;
+const terrain_height = 750;
+
+const previewWidth = 100;
+const previewHeight = 50;
 
 // create scene and camera
 const scene = new THREE.Scene();
@@ -57,6 +61,9 @@ scene.add(ambient);
 
 // create the canvas for the input layer preview and cache the imageData
 const previewCanvas = document.getElementById("renderPreview");
+previewCanvas.width = previewWidth;
+previewCanvas.height = previewHeight;
+
 const ctx = previewCanvas.getContext('2d');
 const imageData = ctx.createImageData(previewWidth, previewHeight);
 const previewData = imageData.data;
@@ -64,20 +71,16 @@ const previewData = imageData.data;
 const activeLayers = {};
 
 // array for iterating over neighbors cleanly
-const neighborOffsets = [
+const neighbor_offsets = [
     [1, 0],
     [-1, 0],
     [0, 1],
-    [0, -1],
-    // [1, 1],
-    // [1, -1],
-    // [-1, 1],
-    // [-1, -1]
+    [0, -1]
 ]
 
 // weights for when a drop deposits its sediment
 // not sure if weighting some more heavily than others is useful at all
-const depositOffsets = [
+const deposit_offsets = [
     [0, 0, 0.2],
     [-1, 0, 0.2],
     [1, 0, 0.2],
@@ -86,39 +89,39 @@ const depositOffsets = [
 ];
 
 // converts (X, Y) to I
-function getIFromXY(x, y, planeWidth) {
-    return y * planeWidth + x;
+function get_i_from_xy(x, y, plane_width) {
+    return y * plane_width + x;
 }
 
 // converts I to (X, Y)
-function getXYFromI(i, planeWidth) {
+function get_xy_from_i(i, plane_width) {
     return {
-        x: i % planeWidth,
-        y: Math.floor(i / planeWidth)
+        x: i % plane_width,
+        y: Math.floor(i / plane_width)
     }
 }
 
 // gets a random number in range. If min is an integer, it will be too.
-function rngInRange(prng, min, max) {
+function rng_in_range(prng, min, max) {
     return Math.floor(prng() * (max - min + 1)) + min;
 }
 
 // finds the lowest neighbor and the delta height for a given node
-function getLowestNeighbor(x, y, z, position, planeWidth, planeHeight, prng) {
+function get_lowest_neighbor(x, y, z, position, plane_width, plane_height, prng) {
     let lowestNeighbor = null;
     let lowestDeltaHeight = 100000000;
 
     // iterate over neighbors
-    for (const [dx, dy] of neighborOffsets) {
+    for (const [dx, dy] of neighbor_offsets) {
         const nx = x + dx;
         const ny = y + dy;
 
         // guard against out of bounds
-        if (nx < 0 || nx >= planeWidth || ny < 0 || ny >= planeHeight) {
+        if (nx < 0 || nx >= plane_width || ny < 0 || ny >= plane_height) {
             continue;
         }
 
-        const nI = getIFromXY(nx, ny, planeWidth);
+        const nI = get_i_from_xy(nx, ny, plane_width);
         const deltaHeight = position.getZ(nI) - z;
         // checks if neighbor is the lowest
         if (deltaHeight < lowestDeltaHeight) {
@@ -134,7 +137,7 @@ function getLowestNeighbor(x, y, z, position, planeWidth, planeHeight, prng) {
 }
 
 // calculates noise given layer parameters and a seeded noise generator
-function calculateNoise(noise2d, x, y, frequency, amplitude, octaves, lacunarity, persistance) {
+function calculate_noise(noise2d, x, y, frequency, amplitude, octaves, lacunarity, persistance) {
     let noise = 0;
     for (let octave = 0; octave < octaves; octave++) {
         const octFrequency = frequency * lacunarity ** octave;
@@ -143,7 +146,7 @@ function calculateNoise(noise2d, x, y, frequency, amplitude, octaves, lacunarity
     return noise;
 }
 
-function calculateExtremeNoise(amplitude, octaves, persistance, extreme) {
+function calculate_extreme_noise(amplitude, octaves, persistance, extreme) {
     let extremeNoise = 0;
     for (let octave = 0; octave < octaves; octave++) {
         extremeNoise += extreme * (amplitude * persistance ** octave);
@@ -152,7 +155,7 @@ function calculateExtremeNoise(amplitude, octaves, persistance, extreme) {
 }
 
 // iterates over height map and uses the normals as slope to pick colors per vertex
-function calculateTerrainColors(geometry) {
+function calculate_terrain_colors(geometry) {
     const position = geometry.getAttribute("position");
     const normals = geometry.getAttribute("normal");
 
@@ -181,11 +184,11 @@ function calculateTerrainColors(geometry) {
 }
 
 // uses a simple implementation of hydraulic erosion to make the terrain look fancy
-function erodeTerrain(geometry, prng) {
+function erode_terrain(geometry, prng) {
     const position = geometry.getAttribute("position");
-    const positionsArray = position.array;
-    const planeWidth = geometry.parameters.widthSegments + 1;
-    const planeHeight = geometry.parameters.heightSegments + 1;
+    const positions_array = position.array;
+    const plane_width = geometry.parameters.widthSegments + 1;
+    const plane_height = geometry.parameters.heightSegments + 1;
 
     // placeholder inputs, maybe allow user to input these via a form?
     // only issue with that is they're very sensitive, so easy to mess up the terrain on accident by changing these
@@ -202,19 +205,19 @@ function erodeTerrain(geometry, prng) {
         // initialize starting values for droplet
         let size = 5;
         let speed = 100;
-        let x = rngInRange(prng, 0, planeWidth - 1);
-        let y = rngInRange(prng, 0, planeHeight - 1);
-        let i = getIFromXY(x, y, planeWidth);
+        let x = rng_in_range(prng, 0, plane_width - 1);
+        let y = rng_in_range(prng, 0, plane_height - 1);
+        let i = get_i_from_xy(x, y, plane_width);
         let sediment = 0;
 
         // step the droplet down 30 times, or until it stops "moving"
         for (let time = 0; time < 50; time++) {
             // move to the lowest nearby neighbor
             const z = position.getZ(i);
-            const {neighbor, deltaHeight} = getLowestNeighbor(x, y, z, position, planeWidth, planeHeight, prng);
+            const {neighbor, deltaHeight} = get_lowest_neighbor(x, y, z, position, plane_width, plane_height, prng);
 
             i = neighbor;
-            ({x, y} = getXYFromI(i, planeWidth));
+            ({x, y} = get_xy_from_i(i, plane_width));
 
             // calculate the current capacity for the droplet (how much sediment it can hold)
             const capacity = Math.max(-deltaHeight * size * speed * baseCapacity, minCapacity);
@@ -229,14 +232,14 @@ function erodeTerrain(geometry, prng) {
                 sediment -= deposition;
 
                 // iterate over neighbors and use hardcoded weights for each
-                for (const [dx, dy, weight] of depositOffsets) {
+                for (const [dx, dy, weight] of deposit_offsets) {
                     const nx = x + dx;
                     const ny = y + dy;
-                    if (nx < 0 || nx >= planeWidth || ny < 0 || ny >= planeHeight) {
+                    if (nx < 0 || nx >= plane_width || ny < 0 || ny >= plane_height) {
                         continue;
                     }
 
-                    positionsArray[getIFromXY(nx, ny, planeWidth) * 3 + 2] += deposition * weight;
+                    positions_array[get_i_from_xy(nx, ny, plane_width) * 3 + 2] += deposition * weight;
                 }
             // otherwise, erode by taking sediment from its surroundings and carrying it with it
             } else {
@@ -250,7 +253,7 @@ function erodeTerrain(geometry, prng) {
                         const nx = x + dx;
                         const ny = y + dy;
                         // guard against out of bounds
-                        if (nx < 0 || nx >= planeWidth || ny < 0 || ny >= planeHeight) {
+                        if (nx < 0 || nx >= plane_width || ny < 0 || ny >= plane_height) {
                             continue;
                         }
 
@@ -260,7 +263,7 @@ function erodeTerrain(geometry, prng) {
                             div = 1;
                         }
                         // update Z position of the vertex directly
-                        positionsArray[getIFromXY(nx, ny, planeWidth) * 3 + 2] -= erosionPerCell / div;
+                        positions_array[get_i_from_xy(nx, ny, plane_width) * 3 + 2] -= erosionPerCell / div;
                     }
                 }
             }
@@ -279,6 +282,78 @@ function erodeTerrain(geometry, prng) {
     position.needsUpdate = true;
 }
 
+function add_edge(i, edges, visited) {
+    if (visited[i]) return;
+    visited[i] = true;
+    edges.push(i);
+}
+
+function fill_depressions_with_water(geometry, colors) {
+    const position = geometry.getAttribute("position");
+    const positions_array = position.array;
+    const plane_width = geometry.parameters.widthSegments + 1;
+    const plane_height = geometry.parameters.heightSegments + 1;
+
+    const visited = Array(plane_width * plane_height).fill(false);
+
+    const edges = [];
+    for (let x = 0; x < plane_width; x++) {
+        const i1 = x;
+        const i2 = x + plane_width * (plane_height - 1);
+        add_edge(i1, edges, visited);
+        add_edge(i2, edges, visited);
+    }
+
+    for (let y = 1; y < plane_height - 1; y++) {
+        const i1 = y * plane_width;
+        const i2 = y * plane_width + plane_width - 1;
+        add_edge(i1, edges, visited);
+        add_edge(i2, edges, visited);
+    }
+
+    const p_queue = PriorityQueue.fromArray(edges, (i1, i2) => {
+        return positions_array[i1 * 3 + 2] - positions_array[i2 * 3 + 2];
+    });
+
+    while (true) {
+        const ci = p_queue.dequeue();
+        if (ci == null) break;
+
+        const ciz = ci * 3 + 2;
+        const {x, y} = get_xy_from_i(ci, plane_width);
+        const z = positions_array[ci * 3 + 2];
+
+        // colors[ciz - 2] = 255
+        // colors[ciz - 1] = 255
+        // colors[ciz] = 255
+        
+        for (const [dx, dy] of neighbor_offsets) {
+            const nx = x + dx;
+            const ny = y + dy;
+            if (nx < 0 || nx >= plane_width || ny < 0 || ny >= plane_height) {
+                continue;
+            }
+
+            const ni = get_i_from_xy(nx, ny, plane_width);
+            const niz = ni * 3 + 2;
+            if (visited[ni]) {
+                continue;
+            }
+
+            const nz = positions_array[niz];
+            if (nz < z) {
+                positions_array[niz] = z;
+                colors[niz - 2] = 0;
+                colors[niz - 1] = 38 / 255;
+                colors[niz] = 91 / 255;
+            }
+
+            p_queue.enqueue(ni);
+            visited[ni] = true;
+        }
+    }
+}
+
 // calculate the generic height map based on layers
 // currently hardcoded with a couple layer's inputs
 function calculateTerrainNoise(geometry, noise2d) {
@@ -287,7 +362,7 @@ function calculateTerrainNoise(geometry, noise2d) {
     for (let i = 0; i < position.count; i++) {
         const x = position.getX(i);
         const y = position.getY(i);
-        const z = calculateNoise(noise2d, x, y, 0.1, 1, 4, 2, 0.5) + calculateNoise(noise2d, x, y, 0.03, 2, 3, 2, 0.5);
+        const z = calculate_noise(noise2d, x, y, 0.1, 1, 3, 2, 0.5) + calculate_noise(noise2d, x, y, 0.03, 2, 3, 2, 0.5);
 
         position.setXYZ(i, x, y, z);
     }
@@ -304,17 +379,19 @@ function renderTerrain() {
     const noise2d = createNoise2D(prng);
 
     // create geometry and populate it with height map
-    const geometry = new THREE.PlaneGeometry(40, 40, terrain_width, terrain_height);
+    const geometry = new THREE.PlaneGeometry(terrain_width_real, terrain_height_real, terrain_width, terrain_height);
     calculateTerrainNoise(geometry, noise2d);
-    erodeTerrain(geometry, prng);
+    erode_terrain(geometry, prng);
 
     // calculate normals and use that to determine color
     geometry.computeVertexNormals();
     const material = new THREE.MeshStandardMaterial({ 
         vertexColors: true
     });
-    const colors = calculateTerrainColors(geometry);
-    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    const colors = calculate_terrain_colors(geometry);
+    fill_depressions_with_water(geometry, colors);
+
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
 
     const heightMap = new THREE.Mesh(geometry, material);
     scene.add(heightMap);
@@ -336,8 +413,8 @@ async function renderPreview(layerId) {
     let octaves = 4;
     let lacunarity = 2;
     let persistance = 0.8;
-    const max = calculateExtremeNoise(amplitude, octaves, persistance, 1);
-    const min = calculateExtremeNoise(amplitude, octaves, persistance, -1);
+    const max = calculate_extreme_noise(amplitude, octaves, persistance, 1);
+    const min = calculate_extreme_noise(amplitude, octaves, persistance, -1);
 
     // the outer for loop and sleep are just a lazy stress test of the layer preview
     // its not cheap to update it every frame, but it can do it
@@ -348,8 +425,10 @@ async function renderPreview(layerId) {
 
     for (let x = 0; x < previewWidth; x++) {
         for (let y = 0; y < previewHeight; y++) {
-            const i = getIFromXY(x, y, previewWidth) * 4;
-            const z = calculateNoise(noise2d, x, y, frequency, amplitude, octaves, lacunarity, persistance);
+            const i = get_i_from_xy(x, y, previewWidth) * 4;
+            // const nx = (x / previewWidth) * (terrain_width_real * 100);
+            // const ny = (y / previewHeight) * (terrain_height_real * 100);
+            const z = calculate_noise(noise2d, x, y, frequency, amplitude, octaves, lacunarity, persistance);
             const colorNoise = Math.floor((z - max) / (min - max) * 255);
 
             previewData[i] = colorNoise;

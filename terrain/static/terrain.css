@@ -47,3 +47,10 @@ body {
     min-height: 0;
     overflow-y: auto;
 }
+
+#renderPreview {
+  /* width: 100%;
+  height: auto; */
+  /* aspect-ratio: 1 / 1; */
+  /* display: block; */
+}
