@@ -171,3 +171,16 @@ def user_logout(request):
     logout(request)
     # Return to homepage.
     return redirect("/")
+
+@login_required(login_url='/login/')
+def save_layer(request):
+    if request.method != "POST":
+        return HttpResponse(status=405)
+
+    layer_id = request.POST.get("layer_id")
+    layer = get_object_or_404(InputLayer, pk=layer_id, user=request.user)
+    form = InputLayerForm(request.POST, instance=layer, prefix=f"layer-{layer_id}")
+    if form.is_valid():
+        form.save()
+        return JsonResponse({"ok": True})
+    return JsonResponse({"ok": False, "errors": form.errors}, status=400)

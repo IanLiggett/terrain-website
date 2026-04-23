@@ -584,6 +584,18 @@ function initLayerCard(layerId) {
     renderPreview(canvas, getLayerParams(form));
 }
 
+async function saveLayer(form) {
+    const layerId = form.dataset.layerId;
+    const formData = new FormData(form);
+    formData.append("layer_id", layerId);
+    const res = await fetch("/savelayer/", {
+        method: "POST",
+        body: formData,
+        headers: { "X-CSRFToken": globcsrfToken },
+        credentials: "same-origin",
+    });
+    if (!res.ok) console.error("Save failed:", res.status);
+}
 
 // Throttle via rAF — skip frames if one is already queued
 let rafPending = false;
@@ -596,12 +608,19 @@ function throttledPreview(form, canvas) {
     });
 }
 
+// Debounce — wait 500ms after last change before saving
+let saveTimer = null;
+function debouncedSave(form) {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => saveLayer(form), 500);
+}
 
 activeLayersList.addEventListener("input", function(event) {
     const form = event.target.closest("form[data-layer-id]");
     if (!form) return;
     const canvas = document.getElementById(`preview-${form.dataset.layerId}`);
     if (canvas) throttledPreview(form, canvas);
+    debouncedSave(form);
 });
 
 document.querySelectorAll("#activeList form[data-layer-id]").forEach(form => {
