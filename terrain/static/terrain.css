@@ -35,6 +35,12 @@ body {
     flex: 0 0 auto;
 }
 
+/* #renderWindow:focus-within {
+    border: 2px solid #007bff; /* Bootstrap primary blue border */
+    border-radius: 0.25rem;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, .25); /* Focus glow */
+} */
+
 #activeListFrame, #allListFrame {
     display: flex;
     flex-direction: column;

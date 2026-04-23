@@ -15,7 +15,7 @@
         <script type="module" src="{% static 'terrain.js' %}"></script>
         {% include "bootstrap.html" %}
     </head>
-    <body>
+    <body onload="load_user_controls()">
         <div id="mainWindow" class="container-fluid">
             <div class="row g-0">
                 <div class="col-12">
@@ -54,7 +54,7 @@
                             EXPORT
                         </button>
                     </div>
-                    <div class="jumbotron">
+                    <div id="additionalSettings" class="jumbotron">
 
                     </div>
                 </div>

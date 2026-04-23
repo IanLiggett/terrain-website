@@ -27,16 +27,156 @@ const previewHeight = 50;
 // create scene and camera
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, camera_perspective(), 0.1, 1000);
-camera.position.y = 10;
-camera.position.z = 15;
+// camera.position.y = 10;
+// camera.position.z = 15;
+camera.position.y = 0.25;
+camera.position.z = -0.35;
 
 // orient camera towards center
-camera.lookAt(new THREE.Vector3(0, -4, 0));
+// camera.lookAt(new THREE.Vector3(0, -4, 0));
 
 // create renderer and add it to the templated page
 const renderer = new THREE.WebGLRenderer();
-renderer.domElement.id = "renderWindow";
-render_window_frame.prepend(renderer.domElement);
+const render_window = renderer.domElement;
+render_window.id = "render_window";
+render_window.setAttribute("tabindex", "0");
+render_window_frame.prepend(render_window);
+
+const cube_geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+const cube_material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+const player_cube = new THREE.Mesh(cube_geometry, cube_material);
+camera.lookAt(player_cube.position);
+player_cube.add(camera);
+scene.add(player_cube);
+
+const raycaster = new THREE.Raycaster();
+const down = new THREE.Vector3(0, -1, 0);
+
+const move_directions = {
+    d: [-1, 0],
+    a: [1, 0],
+    w: [0, 1],
+    s: [0, -1],
+};
+
+const rotate_directions = {
+    ArrowRight: -1,
+    ArrowLeft: 1,
+    "2": 1,
+    "3": -1,
+}
+
+const elevation_directions = {
+    e: 1,
+    q: -1,
+}
+
+window.load_user_controls = function load_user_controls() {
+    render_window_frame.addEventListener("click", () => {
+        render_window.focus();
+    });
+
+    const max_speed = 5;
+    const acceleration = 20;
+    const slowdown = 12;
+
+    const rotate_speed = 0.01;
+
+    const min_height = 0.1;
+    let height = min_height;
+
+    let x_momentum = 0;
+    let y_momentum = 0;
+    let z_momentum = 0;
+    let x_velocity = 0;
+    let y_velocity = 0;
+    let z_velocity = 0;
+
+    let rotate_momentum = 0;
+    let rotate_velocity = 0;
+
+    let last_time = 0;
+
+    function update_momentums(event, direction) {
+        if (event.repeat || terrainMesh === null) return;
+        
+        const move_direction = move_directions[event.key];
+        if (move_direction) {
+            x_momentum += move_direction[0] * direction;
+            y_momentum += move_direction[1] * direction;
+        };
+
+        const rotate_direction = rotate_directions[event.key];
+        if (rotate_direction) {
+            rotate_momentum += rotate_direction * direction;
+        }
+
+        const elevation_direction = elevation_directions[event.key]
+        if (elevation_direction) {
+            z_momentum += elevation_direction * direction;
+        }
+    }
+
+    render_window.addEventListener("keydown", (event) => {
+        update_momentums(event, 1);
+    });
+
+    render_window.addEventListener("keyup", (event) => {
+        update_momentums(event, -1);
+    });
+
+    renderer.setAnimationLoop((time) => {
+        if (terrainMesh === null) return;
+
+        const dt = last_time ? (time - last_time) / 1000 : 0;
+        last_time = time;
+
+        if (x_momentum !== 0) {
+            x_velocity += x_momentum * acceleration * dt;
+        } else {
+            x_velocity -= x_velocity * slowdown * dt;
+        }
+
+        if (y_momentum !== 0) {
+            y_velocity += y_momentum * acceleration * dt;
+        } else {
+            y_velocity -= y_velocity * slowdown * dt;
+        }
+
+        if (z_momentum !== 0) {
+            z_velocity += z_momentum * acceleration * dt;
+        } else {
+            z_velocity -= z_velocity * slowdown * dt;
+        }
+
+        if (rotate_momentum != 0) {
+            rotate_velocity += rotate_momentum * acceleration * dt;
+        } else {
+            rotate_velocity -= rotate_velocity * slowdown * dt
+        }
+
+        x_velocity = Math.max(-max_speed, Math.min(max_speed, x_velocity));
+        y_velocity = Math.max(-max_speed, Math.min(max_speed, y_velocity));
+        z_velocity = Math.max(-max_speed, Math.min(max_speed, z_velocity));
+        rotate_velocity = Math.max(-max_speed, Math.min(max_speed, rotate_velocity));
+
+        player_cube.translateX(x_velocity * dt);
+        player_cube.translateZ(y_velocity * dt);
+        height = Math.max(height + z_velocity * dt, min_height);
+        player_cube.rotation.y += rotate_velocity * rotate_speed;
+
+        // snap cube to the terrain
+        const origin = new THREE.Vector3(player_cube.position.x, 1000, player_cube.position.z);
+        raycaster.set(origin, down);
+
+        const hits = raycaster.intersectObject(terrainMesh);
+        if (hits.length > 0) {
+            player_cube.position.y = hits[0].point.y + height;
+        }
+
+        renderer.render(scene, camera);
+    });
+};
 
 function resize_render_window() {
     const {window_width, window_height} = render_window_size();
@@ -96,6 +236,7 @@ function rng_in_range(prng, min, max) {
     return Math.floor(prng() * (max - min + 1)) + min;
 }
 
+// finds lowest neighbor, selects randomly for similar heights to avoid forming ridges on plains
 function get_lowest_neighbor_epsilon(x, y, z, position, plane_width, plane_height, prng) {
     const neighbors = [];
     let min_height = Infinity;
@@ -119,36 +260,6 @@ function get_lowest_neighbor_epsilon(x, y, z, position, plane_width, plane_heigh
     return {
         neighbor: chosen.i,
         delta_height: chosen.h - z
-    };
-}
-
-// finds the lowest neighbor and the delta height for a given node
-function get_lowest_neighbor(x, y, z, position, plane_width, plane_height, prng) {
-    let lowestNeighbor = null;
-    let lowestDeltaHeight = 100000000;
-
-    // iterate over neighbors
-    for (const [dx, dy] of neighbor_offsets) {
-        const nx = x + dx;
-        const ny = y + dy;
-
-        // guard against out of bounds
-        if (nx < 0 || nx >= plane_width || ny < 0 || ny >= plane_height) {
-            continue;
-        }
-
-        const nI = get_i_from_xy(nx, ny, plane_width);
-        const delta_height = position.getZ(nI) - z + (prng() / 10);
-        // checks if neighbor is the lowest
-        if (delta_height < lowestDeltaHeight) {
-            lowestNeighbor = nI;
-            lowestDeltaHeight = delta_height
-        }
-    }
-
-    return {
-        neighbor: lowestNeighbor,
-        delta_height: lowestDeltaHeight
     };
 }
 
@@ -337,6 +448,7 @@ function fill_depressions_with_water(geometry, colors) {
         return positions_array[i1 * 3 + 2] - positions_array[i2 * 3 + 2];
     });
 
+
     while (true) {
         const ci = p_queue.dequeue();
         if (ci == null) break;
@@ -431,12 +543,15 @@ function renderTerrain(layers, seed=12, erosion=true, water=true) {
         terrainMesh = new THREE.Mesh(geometry, terrainMaterial);
         terrainMesh.rotation.x = -Math.PI / 2;
         scene.add(terrainMesh);
+        renderer.render(scene, camera);
+        // optimization that might be pointless
+        // terrainMesh.matrixAutoUpdate = false;
     } else {
         terrainMesh.geometry.dispose();
         terrainMesh.geometry = geometry;
-    }
 
-    renderer.render(scene, camera);
+        renderer.render(scene, camera);
+    }
 }
 // renderTerrain();
 
