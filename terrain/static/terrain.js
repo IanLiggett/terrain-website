@@ -5,6 +5,7 @@ import Alea from 'https://cdn.jsdelivr.net/npm/alea@1.0.1/+esm';
 import { MinPriorityQueue, MaxPriorityQueue, PriorityQueue } from "https://esm.sh/@datastructures-js/priority-queue@6.3.5";
 
 const middle_column = document.getElementById("middleColumn");
+const render_window_frame = document.getElementById("renderWindowFrame");
 
 function render_window_size() {
     return {"window_width": middle_column.clientWidth, "window_height": middle_column.clientHeight / 2};
@@ -17,8 +18,8 @@ function camera_perspective() {
 const terrain_width_real = 40;
 const terrain_height_real = 40;
 
-const terrain_width = 750;
-const terrain_height = 750;
+const terrain_width = 500;
+const terrain_height = 500;
 
 const previewWidth = 100;
 const previewHeight = 50;
@@ -26,16 +27,16 @@ const previewHeight = 50;
 // create scene and camera
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, camera_perspective(), 0.1, 1000);
-camera.position.y = -15;
-camera.position.z = 10;
+camera.position.y = 10;
+camera.position.z = 15;
 
 // orient camera towards center
-camera.lookAt(new THREE.Vector3(0, -2.2, 0));
+camera.lookAt(new THREE.Vector3(0, -4, 0));
 
 // create renderer and add it to the templated page
 const renderer = new THREE.WebGLRenderer();
 renderer.domElement.id = "renderWindow";
-middle_column.prepend(renderer.domElement);
+render_window_frame.prepend(renderer.domElement);
 
 function resize_render_window() {
     const {window_width, window_height} = render_window_size();
@@ -106,6 +107,32 @@ function rng_in_range(prng, min, max) {
     return Math.floor(prng() * (max - min + 1)) + min;
 }
 
+function get_lowest_neighbor_epsilon(x, y, z, position, plane_width, plane_height, prng) {
+    const neighbors = [];
+    let min_height = Infinity;
+
+    for (const [dx, dy] of neighbor_offsets) {
+        const nx = x + dx;
+        const ny = y + dy;
+        if (nx < 0 || nx >= plane_width || ny < 0 || ny >= plane_height) continue;
+
+        const i = get_i_from_xy(nx, ny, plane_width);
+        const h = position.getZ(i);
+
+        neighbors.push({ i, h });
+        if (h < min_height) min_height = h;
+    }
+
+    const epsilon = 1e-2;
+    const candidates = neighbors.filter(n => n.h <= min_height + epsilon);
+
+    const chosen = candidates[Math.floor(rng_in_range(prng, 0, candidates.length - 1))];
+    return {
+        neighbor: chosen.i,
+        delta_height: chosen.h - z
+    };
+}
+
 // finds the lowest neighbor and the delta height for a given node
 function get_lowest_neighbor(x, y, z, position, plane_width, plane_height, prng) {
     let lowestNeighbor = null;
@@ -122,17 +149,17 @@ function get_lowest_neighbor(x, y, z, position, plane_width, plane_height, prng)
         }
 
         const nI = get_i_from_xy(nx, ny, plane_width);
-        const deltaHeight = position.getZ(nI) - z;
+        const delta_height = position.getZ(nI) - z + (prng() / 10);
         // checks if neighbor is the lowest
-        if (deltaHeight < lowestDeltaHeight) {
+        if (delta_height < lowestDeltaHeight) {
             lowestNeighbor = nI;
-            lowestDeltaHeight = deltaHeight
+            lowestDeltaHeight = delta_height
         }
     }
 
     return {
         neighbor: lowestNeighbor,
-        deltaHeight: lowestDeltaHeight
+        delta_height: lowestDeltaHeight
     };
 }
 
@@ -190,21 +217,21 @@ function erode_terrain(geometry, prng) {
     const plane_width = geometry.parameters.widthSegments + 1;
     const plane_height = geometry.parameters.heightSegments + 1;
 
-    // placeholder inputs, maybe allow user to input these via a form?
+    // placeholder inputs, probably don't allow user to input these
     // only issue with that is they're very sensitive, so easy to mess up the terrain on accident by changing these
-    const sizeRetention = 0.8;
+    const sizeRetention = 0.9;
     const speedRetention = 0.9;
-    const depositSpeed = 0.05;
-    const erodeSpeed = 0.08;
+    const depositSpeed = 0.1;
+    const erodeSpeed = 0.1;
     const erosionRadius = 3;
     const minCapacity = 0.1;
-    const baseCapacity = 2;
+    const baseCapacity = 5;
     const droplets = 100000;
     // simulate some number of droplets
     for (let droplet = 0; droplet < droplets; droplet++) {
         // initialize starting values for droplet
         let size = 5;
-        let speed = 100;
+        let speed = 5;
         let x = rng_in_range(prng, 0, plane_width - 1);
         let y = rng_in_range(prng, 0, plane_height - 1);
         let i = get_i_from_xy(x, y, plane_width);
@@ -214,18 +241,22 @@ function erode_terrain(geometry, prng) {
         for (let time = 0; time < 50; time++) {
             // move to the lowest nearby neighbor
             const z = position.getZ(i);
-            const {neighbor, deltaHeight} = get_lowest_neighbor(x, y, z, position, plane_width, plane_height, prng);
+            const {neighbor, delta_height} = get_lowest_neighbor_epsilon(x, y, z, position, plane_width, plane_height, prng);
+
+            if (Math.abs(delta_height) < 0.01) {
+                break;
+            }
 
             i = neighbor;
             ({x, y} = get_xy_from_i(i, plane_width));
 
             // calculate the current capacity for the droplet (how much sediment it can hold)
-            const capacity = Math.max(-deltaHeight * size * speed * baseCapacity, minCapacity);
+            const capacity = Math.max(-delta_height * size * speed * baseCapacity, minCapacity);
             // if sediment is greater than capacity or its moving up instead of down, deposit excess sediment nearby right away
-            if (sediment > capacity || deltaHeight > 0) {
+            if (sediment > capacity || delta_height > 0) {
                 let deposition;
-                if (deltaHeight > 0) {
-                    deposition = Math.min(deltaHeight, sediment);
+                if (delta_height > 0) {
+                    deposition = Math.min(delta_height, sediment);
                 } else {
                     deposition = (sediment - capacity) * depositSpeed;
                 }
@@ -243,9 +274,8 @@ function erode_terrain(geometry, prng) {
                 }
             // otherwise, erode by taking sediment from its surroundings and carrying it with it
             } else {
-                const erosion = Math.min((capacity - sediment) * erodeSpeed, -deltaHeight);
+                const erosion = Math.min((capacity - sediment) * erodeSpeed, -delta_height);
                 const erosionPerCell = erosion / (erosionRadius * 2 + 1) ** 2;
-                sediment += erosion;
                 
                 // iterate over nearby nodes based on a radius to erode from them
                 for (let dx = -erosionRadius; dx < erosionRadius + 1; dx++) {
@@ -258,18 +288,17 @@ function erode_terrain(geometry, prng) {
                         }
 
                         // scale by distance from center of erosion, guarding against 0 case
-                        let div = Math.sqrt(Math.abs(dx)^2 + Math.abs(dy)^2) / 1.4;
-                        if (div == 0) {
-                            div = 1;
-                        }
+                        let div = Math.hypot(dx, dy) / 1.4;
+                        if (div === 0) div = 1;
                         // update Z position of the vertex directly
                         positions_array[get_i_from_xy(nx, ny, plane_width) * 3 + 2] -= erosionPerCell / div;
+                        sediment += erosionPerCell / div;
                     }
                 }
             }
 
             // update speed based on delta height
-            speed = Math.max(speed + (-deltaHeight), 0.1) * speedRetention;
+            speed = Math.max(speed + (-delta_height), 0.1) * speedRetention;
             // decrease size of the droplet
             size *= sizeRetention;
 
@@ -373,7 +402,7 @@ function calculateTerrainNoise(geometry, noise2d) {
 // main function which uses the scene to render the terrain
 function renderTerrain() {
     // hardcoded seed
-    const seed = 6;
+    const seed = 12;
     // initialize seeded random number generator and noise function
     const prng = Alea(seed);
     const noise2d = createNoise2D(prng);
@@ -390,10 +419,12 @@ function renderTerrain() {
     });
     const colors = calculate_terrain_colors(geometry);
     fill_depressions_with_water(geometry, colors);
+    geometry.computeVertexNormals();
 
     geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
 
     const heightMap = new THREE.Mesh(geometry, material);
+    heightMap.rotation.x = -Math.PI / 2;
     scene.add(heightMap);
 
     renderer.render(scene, camera);
