@@ -23,7 +23,7 @@ class InputLayerForm(forms.ModelForm):
             "amplitude": forms.NumberInput(attrs={
                 "type": "range",
                 "min": "0.01",
-                "max": "10",
+                "max": "6",
                 "step": "0.01",
                 "class": "form-range",
             }),
