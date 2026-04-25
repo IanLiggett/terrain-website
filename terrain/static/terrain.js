@@ -93,7 +93,7 @@ scene.fog = new THREE.Fog(0xcccccc, 30, 100);
 const cube_geometry = new THREE.BoxGeometry(0.02, 0.02, 0.02);
 const cube_material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
 const camera_cube = new THREE.Mesh(cube_geometry, cube_material);
-// camera_cube.visible = false;
+camera_cube.visible = false;
 camera.lookAt(camera_cube.position);
 camera_cube.add(camera);
 scene.add(camera_cube);
@@ -146,8 +146,11 @@ function snap_cube_to_floor(camera_cube, height) {
   raycaster.intersectObject(terrain_mesh, false, hits);
 
   if (hits.length > 0) {
-    camera_cube.position.y = Math.max(hits[0].point.y + 0.1, height);
+    height = Math.max(hits[0].point.y + 0.1, height)
+    camera_cube.position.y = height;
   }
+
+  return height;
 }
 
 // user controls to allow user to traverse scene
@@ -249,7 +252,7 @@ window.load_user_controls = function load_user_controls() {
         height = height + z_velocity * dt;
 
         if (active_layers) {
-            snap_cube_to_floor(camera_cube, height);
+            height = snap_cube_to_floor(camera_cube, height);
 
             // const terrain_cube_coords = new THREE.Vector3();
             // camera_cube.getWorldPosition(terrain_cube_coords);
@@ -530,24 +533,29 @@ function fill_depressions_with_water(geometry, colors) {
 
     const visited = new Array(plane_width * plane_height).fill(false);
 
-    const indegree = new Array(plane_width * plane_height).fill(0);
-    const receivers = new Array(plane_width * plane_height).fill(null);
+    const indegree = new Uint8Array(plane_width * plane_height).fill(0);
+    const receivers = new Uint32Array(plane_width * plane_height).fill(null);
     const water = new Array(plane_width * plane_height).fill(false);
     // let "rain" decide starting value
-    const accumulation = new Array(plane_width * plane_height).fill(3);
+    const accumulation = new Uint32Array(plane_width * plane_height).fill(3);
     const water_mask = new Float32Array(plane_width * plane_height);
 
+    // How much the water rises per iteration during priority flood filling
     const dz = 0.002;
 
+    // how high of a bank a river can overcome
     const bank_tolerance = 0.05;
 
+    // min and max blue coloring for the water
     const min_alpha = 0.5;
     const max_alpha = 0.7;
     
+    // definition of a river based on water accumulation
     const min_river = 1000;
     const max_river = 100000;
     const river_range = max_river - min_river;
 
+    // power to scale width of rivers non linearly
     const width_beta = 0.5;
 
     const queue = new Denque();
@@ -571,7 +579,7 @@ function fill_depressions_with_water(geometry, colors) {
         return positions_array[i1 * 3 + 2] - positions_array[i2 * 3 + 2];
     });
 
-    // use non priority queue for flat sections (water) - optimization
+    // use non priority queue for flat sections (water) - optimization | only if water doesn't rise in a lake anywhere
 
     while (true) {
         const ci = p_queue.dequeue();
@@ -685,6 +693,7 @@ function fill_depressions_with_water(geometry, colors) {
     }
 }
 
+// this dang thing didn't work properly, resorted to raycasts instead
 // function height_at_coords(x, y, geometry) {
 //     const position = geometry.getAttribute("position");
 //     const positions_array = position.array;
@@ -714,6 +723,7 @@ function fill_depressions_with_water(geometry, colors) {
 
 //     return lerp(top, bottom, ty);
 // }
+
 
 function calculate_noise_at_coords(layers, x, y, noise2d) {
     let z = 0;

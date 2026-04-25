@@ -22,7 +22,7 @@ def activate_layer(request):
 
     layer_card = render_to_string(
         "layercard.html",
-        {"layer": layer, "input_layer_form": InputLayerForm(instance=layer)},
+        {"layer": layer, "input_layer_form": InputLayerForm(instance=layer, prefix=f"layer-{layer.id}")},
         request=request
     )
     layer_stick = render_to_string(
@@ -65,7 +65,7 @@ def create_input_layer(request):
 
     layer_card = render_to_string(
         "layercard.html",
-        {"layer": layer, "input_layer_form": InputLayerForm(instance=layer)},
+        {"layer": layer, "input_layer_form": InputLayerForm(instance=layer, prefix=f"layer-{layer.id}")},
         request=request
     )
     layer_stick = render_to_string(
