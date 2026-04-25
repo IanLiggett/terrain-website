@@ -1,8 +1,10 @@
 import * as THREE from 'three';
 import { GLTFExporter } from "three/addons/exporters/GLTFExporter.js";
+import { Sky } from 'three/addons/objects/Sky.js';
 import { createNoise2D } from 'https://cdn.jsdelivr.net/npm/simplex-noise@4.0.1/+esm';
 import Alea from 'https://cdn.jsdelivr.net/npm/alea@1.0.1/+esm';
 import { MinPriorityQueue, MaxPriorityQueue, PriorityQueue } from "https://esm.sh/@datastructures-js/priority-queue@6.3.5";
+import Denque from 'https://esm.sh/denque';
 
 const middle_column = document.getElementById("middleColumn");
 const render_window_frame = document.getElementById("renderWindowFrame");
@@ -27,26 +29,73 @@ const previewHeight = 50;
 let active_layers = null;
 let active_noise = null;
 
+
 // create scene and camera
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, camera_perspective(), 0.1, 1000);
-camera.position.y = 0.25;
+camera.position.y = 0.2;
 camera.position.z = -0.35;
 
-// create renderer and add it to the templated page
+
+// create renderer and add it to the page
 const renderer = new THREE.WebGLRenderer();
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+// renderer.toneMapping = THREE.ACESFilmicToneMapping;
+// renderer.toneMappingExposure = 0.6;
+
 const render_window = renderer.domElement;
 render_window.id = "render_window";
 render_window.setAttribute("tabindex", "0");
 render_window_frame.prepend(render_window);
 
-const cube_geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+
+// create skybox so we're totally not in an infinite void
+const sky = new Sky();
+sky.scale.setScalar(200);
+scene.add(sky);
+
+const uniforms = sky.material.uniforms;
+const sun = new THREE.Vector3();
+
+// renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.NoToneMapping;
+renderer.toneMappingExposure = 1.0;
+
+uniforms.turbidity.value = 3;
+uniforms.rayleigh.value = 3;
+uniforms.mieCoefficient.value = 0.0005;
+uniforms.mieDirectionalG.value = 0.9;
+
+const elevation = 5;
+const azimuth = 180;
+const distance = 450000;
+
+const phi = THREE.MathUtils.degToRad(90 - elevation);
+const theta = THREE.MathUtils.degToRad(azimuth);
+
+sun.setFromSphericalCoords(distance, phi, theta);
+uniforms.sunPosition.value.copy(sun);
+
+const sunLight = new THREE.DirectionalLight(0xffc07d, 1.5);
+sunLight.position.copy(sun).multiplyScalar(100);
+scene.add(sunLight);
+
+const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+scene.add(ambient);
+
+scene.fog = new THREE.Fog(0xcccccc, 30, 100);
+
+// create users cube that the camera locks to
+const cube_geometry = new THREE.BoxGeometry(0.02, 0.02, 0.02);
 const cube_material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
 const player_cube = new THREE.Mesh(cube_geometry, cube_material);
+player_cube.visible = false;
 camera.lookAt(player_cube.position);
 player_cube.add(camera);
 scene.add(player_cube);
 
+
+// keybinds for movement controls
 const move_directions = {
     d: [-1, 0],
     a: [1, 0],
@@ -66,6 +115,7 @@ const elevation_directions = {
     q: -1,
 }
 
+// user controls to allow user to traverse scene
 window.load_user_controls = function load_user_controls() {
     render_window_frame.addEventListener("click", () => {
         render_window.focus();
@@ -185,20 +235,23 @@ resize_render_window();
 const observer = new ResizeObserver(resize_render_window);
 observer.observe(render_window_frame);
 
-// create light, ambient for global visibility and a point light for shadows
-const light = new THREE.DirectionalLight(0xffffff, 2);
-light.position.set(5, 10, 10);
-scene.add(light);
-
-const ambient = new THREE.AmbientLight(0xffffff, 0.5);
-scene.add(ambient);
-
 // array for iterating over neighbors cleanly
 const neighbor_offsets = [
     [1, 0],
     [-1, 0],
     [0, 1],
     [0, -1]
+]
+
+const water_neighbor_offsets = [
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [0, -1],
+    [1, 1],
+    [1, -1],
+    [-1, 1],
+    [-1, -1],
 ]
 
 // weights for when a drop deposits its sediment
@@ -316,13 +369,14 @@ function erode_terrain(geometry, prng) {
     const speedRetention = 0.9;
     const depositSpeed = 0.1;
     const erodeSpeed = 0.1;
-    const erosionRadius = 3;
+    // const erosionRadius = 3;
     const minCapacity = 0.1;
     const baseCapacity = 5;
     const droplets = 100000;
     // simulate some number of droplets
     for (let droplet = 0; droplet < droplets; droplet++) {
         // initialize starting values for droplet
+        let erosionRadius = rng_in_range(prng, 2, 4);
         let size = 5;
         let speed = 5;
         let x = rng_in_range(prng, 0, plane_width - 1);
@@ -410,13 +464,42 @@ function add_edge(i, edges, visited) {
     edges.push(i);
 }
 
+const lerp = (start, end, t) => start + t * (end - start);
+
+function linear_falloff(distance, max_distance) {
+  // Returns 1 at distance 0, and 0 at maxDistance
+  return Math.max(0, 1 - (distance / max_distance));
+}
+
 function fill_depressions_with_water(geometry, colors) {
     const position = geometry.getAttribute("position");
     const positions_array = position.array;
     const plane_width = geometry.parameters.widthSegments + 1;
     const plane_height = geometry.parameters.heightSegments + 1;
 
-    const visited = Array(plane_width * plane_height).fill(false);
+    const visited = new Array(plane_width * plane_height).fill(false);
+
+    const indegree = new Array(plane_width * plane_height).fill(0);
+    const receivers = new Array(plane_width * plane_height).fill(null);
+    const water = new Array(plane_width * plane_height).fill(false);
+    // let "rain" decide starting value
+    const accumulation = new Array(plane_width * plane_height).fill(3);
+    const water_mask = new Float32Array(plane_width * plane_height);
+
+    const dz = 0.002;
+
+    const bank_tolerance = 0.05;
+
+    const min_alpha = 0.5;
+    const max_alpha = 0.7;
+    
+    const min_river = 1000;
+    const max_river = 100000;
+    const river_range = max_river - min_river;
+
+    const width_beta = 0.5;
+
+    const queue = new Denque();
 
     const edges = [];
     for (let x = 0; x < plane_width; x++) {
@@ -443,11 +526,10 @@ function fill_depressions_with_water(geometry, colors) {
         const ci = p_queue.dequeue();
         if (ci == null) break;
 
-        const ciz = ci * 3 + 2;
         const {x, y} = get_xy_from_i(ci, plane_width);
         const z = positions_array[ci * 3 + 2];
 
-        for (const [dx, dy] of neighbor_offsets) {
+        for (const [dx, dy] of water_neighbor_offsets) {
             const nx = x + dx;
             const ny = y + dy;
             if (nx < 0 || nx >= plane_width || ny < 0 || ny >= plane_height) {
@@ -462,15 +544,93 @@ function fill_depressions_with_water(geometry, colors) {
 
             const nz = positions_array[niz];
             if (nz < z) {
-                positions_array[niz] = z;
-                colors[niz - 2] = 0;
-                colors[niz - 1] = 38 / 255;
-                colors[niz] = 91 / 255;
+                // simply heuristic for determing how filled basins contribute to water accumulation
+                accumulation[ni] += 4;
+                water[ni] = true;
+
+                positions_array[niz] = z + dz;
+
+                water_mask[ni] = lerp(min_alpha, max_alpha, Math.max((z - nz) / 2, 0));
             }
 
             p_queue.enqueue(ni);
             visited[ni] = true;
+
+            indegree[ci] += 1;
+            receivers[ni] = ci;
         }
+        
+        // add leaf nodes to the queue for river calculations
+        if (indegree[ci] == 0) queue.push(ci);
+    }
+
+    while (true) {
+        const ci = queue.shift();
+        if (ci == null) break;
+
+        const acc = accumulation[ci];
+        if (acc >= min_river && !water[ci]) {
+            const river_strength = Math.max(Math.min((acc - min_river) / river_range, 1), 0);
+            // const width = Math.max(1, Math.round(lerp(1, 10, Math.pow(river_strength, width_beta))));
+            const width = Math.floor(lerp(0, 10, Math.pow(river_strength, width_beta)));
+
+            const center_alpha = lerp(min_alpha, max_alpha, river_strength);
+            if (center_alpha > water_mask[ci]) {
+                water_mask[ci] = center_alpha;
+            }
+
+            const {x, y} = get_xy_from_i(ci, plane_width);
+            const cz = positions_array[ci * 3 + 2];
+            for (let dx = -width; dx <= width; dx++) {
+                const nx = x + dx;
+                if (nx < 0 || nx >= plane_width) continue;
+
+                for (let dy = -width; dy <= width; dy++) {
+                    const ny = y + dy;
+                    if (ny < 0 || ny >= plane_height) continue;
+
+                    const ni = get_i_from_xy(nx, ny, plane_width);
+                    if (water[ni]) continue;
+                    
+                    const distance = Math.hypot(dx, dy);
+                    if (distance > width) continue;
+
+                    const nz = positions_array[ni * 3 + 2];
+
+                    const dh = nz - cz;
+                    // if (dh > bank_tolerance/2) {
+                    //     positions_array[ni * 3 + 2] -= dh/2;
+                    // };
+                    if (dh > bank_tolerance) continue;
+
+                    const distance_factor = 1 - distance / width;
+                    const height_factor = 1 - Math.max(0, dh) / bank_tolerance;
+                    const alpha = lerp(min_alpha, max_alpha, river_strength * distance_factor * height_factor);
+                    if (alpha > water_mask[ni]) {
+                        water_mask[ni] = alpha;
+                    }
+                }
+            }
+        }
+
+        const receiver = receivers[ci];
+        if (receiver == null) continue;
+
+        accumulation[receiver] += acc;
+
+        indegree[receiver] -= 1;
+        if (indegree[receiver] != 0) continue; 
+
+        queue.push(receiver);
+    }
+
+    for (let i = 0; i < water_mask.length; i++) {
+        const alpha = water_mask[i];
+        if (alpha <= 0) continue;
+
+        colors[i * 3] = 0;
+        colors[i * 3 + 1] = (38 / 255) * alpha;
+        colors[i * 3 + 2] = Math.max(colors[i * 3 + 2], alpha);
     }
 }
 
@@ -507,7 +667,7 @@ function calculate_terrain_noise(layers, geometry, noise2d) {
 let terrain_mesh = null;
 const terrain_material = new THREE.MeshStandardMaterial({ vertexColors: true });
 
-function render_terrain(layers, seed=12, erosion=true, water=true) {
+function render_terrain(layers, seed=13, erosion=true, water=true) {
     set_render_button_inactive();
 
     // initialize seeded random number generator and noise function
