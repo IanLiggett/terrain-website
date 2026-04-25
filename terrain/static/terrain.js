@@ -136,7 +136,7 @@ raycaster.layers.set(1);
 raycaster.near = 0;
 raycaster.far = 200;
 
-function snap_cube_to_floor(camera_cube, height_offset) {
+function snap_cube_to_floor(camera_cube, height) {
   camera_cube.getWorldPosition(origin);
   origin.y += 100;
 
@@ -146,7 +146,7 @@ function snap_cube_to_floor(camera_cube, height_offset) {
   raycaster.intersectObject(terrain_mesh, false, hits);
 
   if (hits.length > 0) {
-    camera_cube.position.y = hits[0].point.y + height_offset;
+    camera_cube.position.y = Math.max(hits[0].point.y + 0.1, height);
   }
 }
 
@@ -244,11 +244,13 @@ window.load_user_controls = function load_user_controls() {
 
         camera_cube.translateX(x_velocity * dt);
         camera_cube.translateZ(y_velocity * dt);
-        height = Math.max(height + z_velocity * dt, min_height);
         camera_cube.rotation.y += rotate_velocity * rotate_speed;
+
+        height = height + z_velocity * dt;
 
         if (active_layers) {
             snap_cube_to_floor(camera_cube, height);
+
             // const terrain_cube_coords = new THREE.Vector3();
             // camera_cube.getWorldPosition(terrain_cube_coords);
             // terrain_mesh.worldToLocal(terrain_cube_coords);
@@ -683,35 +685,35 @@ function fill_depressions_with_water(geometry, colors) {
     }
 }
 
-function height_at_coords(x, y, geometry) {
-    const position = geometry.getAttribute("position");
-    const positions_array = position.array;
-    const plane_segments_x = geometry.parameters.widthSegments;
-    const plane_segments_y = geometry.parameters.heightSegments;
+// function height_at_coords(x, y, geometry) {
+//     const position = geometry.getAttribute("position");
+//     const positions_array = position.array;
+//     const plane_segments_x = geometry.parameters.widthSegments;
+//     const plane_segments_y = geometry.parameters.heightSegments;
 
-    const x0 = Math.floor(x);
-    const y0 = Math.floor(y);
-    const x1 = x0 + 1;
-    const y1 = y0 + 1;
+//     const x0 = Math.floor(x);
+//     const y0 = Math.floor(y);
+//     const x1 = x0 + 1;
+//     const y1 = y0 + 1;
 
-    const cx0 = Math.max(0, Math.min(x0, plane_segments_x));
-    const cx1 = Math.max(0, Math.min(x1, plane_segments_x));
-    const cy0 = Math.max(0, Math.min(y0, plane_segments_y));
-    const cy1 = Math.max(0, Math.min(y1, plane_segments_y));
+//     const cx0 = Math.max(0, Math.min(x0, plane_segments_x));
+//     const cx1 = Math.max(0, Math.min(x1, plane_segments_x));
+//     const cy0 = Math.max(0, Math.min(y0, plane_segments_y));
+//     const cy1 = Math.max(0, Math.min(y1, plane_segments_y));
 
-    const z00 = positions_array[get_i_from_xy(cx0, cy0, plane_segments_x + 1) * 3 + 2];
-    const z10 = positions_array[get_i_from_xy(cx1, cy0, plane_segments_x + 1) * 3 + 2];
-    const z01 = positions_array[get_i_from_xy(cx0, cy1, plane_segments_x + 1) * 3 + 2];
-    const z11 = positions_array[get_i_from_xy(cx1, cy1, plane_segments_x + 1) * 3 + 2];
+//     const z00 = positions_array[get_i_from_xy(cx0, cy0, plane_segments_x + 1) * 3 + 2];
+//     const z10 = positions_array[get_i_from_xy(cx1, cy0, plane_segments_x + 1) * 3 + 2];
+//     const z01 = positions_array[get_i_from_xy(cx0, cy1, plane_segments_x + 1) * 3 + 2];
+//     const z11 = positions_array[get_i_from_xy(cx1, cy1, plane_segments_x + 1) * 3 + 2];
 
-    const tx = x - x0;
-    const ty = y - y0;
+//     const tx = x - x0;
+//     const ty = y - y0;
 
-    const top = lerp(z00, z10, tx);
-    const bottom = lerp(z01, z11, tx);
+//     const top = lerp(z00, z10, tx);
+//     const bottom = lerp(z01, z11, tx);
 
-    return lerp(top, bottom, ty);
-}
+//     return lerp(top, bottom, ty);
+// }
 
 function calculate_noise_at_coords(layers, x, y, noise2d) {
     let z = 0;
@@ -731,10 +733,6 @@ function calculate_terrain_noise(layers, geometry, noise2d) {
         const y = position.getY(i);
         // const z = calculate_noise(noise2d, x, y, 0.1, 1, 3, 2, 0.5) + calculate_noise(noise2d, x, y, 0.03, 2, 3, 2, 0.5);
         const z = calculate_noise_at_coords(layers, x, y, noise2d);
-        // let z = 0;
-        // for (const layer of layers) {
-        //     z += calculate_noise(noise2d, x, y, layer.frequency, layer.amplitude, layer.octaves, layer.lacunarity, layer.persistence);
-        // }
 
         position.setXYZ(i, x, y, z);
     }
@@ -743,7 +741,7 @@ function calculate_terrain_noise(layers, geometry, noise2d) {
 }
 
 // main function which uses the scene to render the terrain
-function render_terrain(layers, seed=13, erosion=false, water=false) {
+function render_terrain(layers, seed=13, erosion=true, water=true) {
     set_render_button_inactive();
 
     // initialize seeded random number generator and noise function
