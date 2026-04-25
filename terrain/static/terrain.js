@@ -1,6 +1,11 @@
 import * as THREE from 'three';
 import { GLTFExporter } from "three/addons/exporters/GLTFExporter.js";
 import { Sky } from 'three/addons/objects/Sky.js';
+import {
+  acceleratedRaycast,
+  computeBoundsTree,
+  disposeBoundsTree,
+} from 'three-mesh-bvh';
 import { createNoise2D } from 'https://cdn.jsdelivr.net/npm/simplex-noise@4.0.1/+esm';
 import Alea from 'https://cdn.jsdelivr.net/npm/alea@1.0.1/+esm';
 import { MinPriorityQueue, MaxPriorityQueue, PriorityQueue } from "https://esm.sh/@datastructures-js/priority-queue@6.3.5";
@@ -28,7 +33,6 @@ const previewHeight = 50;
 
 let active_layers = null;
 let active_noise = null;
-
 
 // create scene and camera
 const scene = new THREE.Scene();
@@ -88,12 +92,14 @@ scene.fog = new THREE.Fog(0xcccccc, 30, 100);
 // create users cube that the camera locks to
 const cube_geometry = new THREE.BoxGeometry(0.02, 0.02, 0.02);
 const cube_material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-const player_cube = new THREE.Mesh(cube_geometry, cube_material);
-player_cube.visible = false;
-camera.lookAt(player_cube.position);
-player_cube.add(camera);
-scene.add(player_cube);
+const camera_cube = new THREE.Mesh(cube_geometry, cube_material);
+// camera_cube.visible = false;
+camera.lookAt(camera_cube.position);
+camera_cube.add(camera);
+scene.add(camera_cube);
 
+let terrain_mesh = null;
+const terrain_material = new THREE.MeshStandardMaterial({ vertexColors: true });
 
 // keybinds for movement controls
 const move_directions = {
@@ -113,6 +119,35 @@ const rotate_directions = {
 const elevation_directions = {
     e: 1,
     q: -1,
+}
+
+THREE.Mesh.prototype.raycast = acceleratedRaycast;
+THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
+THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
+
+// optional with three-mesh-bvh:
+const raycaster = new THREE.Raycaster();
+const down = new THREE.Vector3(0, -1, 0);
+const origin = new THREE.Vector3();
+const hits = [];
+
+raycaster.firstHitOnly = true;
+raycaster.layers.set(1);
+raycaster.near = 0;
+raycaster.far = 200;
+
+function snap_cube_to_floor(camera_cube, height_offset) {
+  camera_cube.getWorldPosition(origin);
+  origin.y += 100;
+
+  raycaster.set(origin, down);
+
+  hits.length = 0;
+  raycaster.intersectObject(terrain_mesh, false, hits);
+
+  if (hits.length > 0) {
+    camera_cube.position.y = hits[0].point.y + height_offset;
+  }
 }
 
 // user controls to allow user to traverse scene
@@ -207,14 +242,28 @@ window.load_user_controls = function load_user_controls() {
         z_velocity = Math.max(-max_speed, Math.min(max_speed, z_velocity));
         rotate_velocity = Math.max(-max_speed, Math.min(max_speed, rotate_velocity));
 
-        player_cube.translateX(x_velocity * dt);
-        player_cube.translateZ(y_velocity * dt);
+        camera_cube.translateX(x_velocity * dt);
+        camera_cube.translateZ(y_velocity * dt);
         height = Math.max(height + z_velocity * dt, min_height);
-        player_cube.rotation.y += rotate_velocity * rotate_speed;
+        camera_cube.rotation.y += rotate_velocity * rotate_speed;
 
         if (active_layers) {
-            const terrain_z = calculate_noise_at_coords(active_layers, player_cube.position.x, player_cube.position.z, active_noise);
-            player_cube.position.y = terrain_z + height;
+            snap_cube_to_floor(camera_cube, height);
+            // const terrain_cube_coords = new THREE.Vector3();
+            // camera_cube.getWorldPosition(terrain_cube_coords);
+            // terrain_mesh.worldToLocal(terrain_cube_coords);
+
+            // const x = terrain_cube_coords.x;
+            // const z = terrain_cube_coords.z;
+
+            // const terrain_segments_x = terrain_mesh.geometry.parameters.widthSegments;
+            // const terrain_segments_y = terrain_mesh.geometry.parameters.heightSegments;
+
+            // const grid_x = ((x + terrain_width_real / 2) / terrain_width_real) * terrain_segments_x;
+            // const grid_z = ((z + terrain_height_real / 2) / terrain_height_real) * terrain_segments_y;
+
+            // const terrain_z = height_at_coords(grid_x, grid_z, terrain_mesh.geometry);
+            // camera_cube.position.y = terrain_z + height;
         }
 
         renderer.render(scene, camera);
@@ -634,6 +683,36 @@ function fill_depressions_with_water(geometry, colors) {
     }
 }
 
+function height_at_coords(x, y, geometry) {
+    const position = geometry.getAttribute("position");
+    const positions_array = position.array;
+    const plane_segments_x = geometry.parameters.widthSegments;
+    const plane_segments_y = geometry.parameters.heightSegments;
+
+    const x0 = Math.floor(x);
+    const y0 = Math.floor(y);
+    const x1 = x0 + 1;
+    const y1 = y0 + 1;
+
+    const cx0 = Math.max(0, Math.min(x0, plane_segments_x));
+    const cx1 = Math.max(0, Math.min(x1, plane_segments_x));
+    const cy0 = Math.max(0, Math.min(y0, plane_segments_y));
+    const cy1 = Math.max(0, Math.min(y1, plane_segments_y));
+
+    const z00 = positions_array[get_i_from_xy(cx0, cy0, plane_segments_x + 1) * 3 + 2];
+    const z10 = positions_array[get_i_from_xy(cx1, cy0, plane_segments_x + 1) * 3 + 2];
+    const z01 = positions_array[get_i_from_xy(cx0, cy1, plane_segments_x + 1) * 3 + 2];
+    const z11 = positions_array[get_i_from_xy(cx1, cy1, plane_segments_x + 1) * 3 + 2];
+
+    const tx = x - x0;
+    const ty = y - y0;
+
+    const top = lerp(z00, z10, tx);
+    const bottom = lerp(z01, z11, tx);
+
+    return lerp(top, bottom, ty);
+}
+
 function calculate_noise_at_coords(layers, x, y, noise2d) {
     let z = 0;
     for (const layer of layers) {
@@ -664,10 +743,7 @@ function calculate_terrain_noise(layers, geometry, noise2d) {
 }
 
 // main function which uses the scene to render the terrain
-let terrain_mesh = null;
-const terrain_material = new THREE.MeshStandardMaterial({ vertexColors: true });
-
-function render_terrain(layers, seed=13, erosion=true, water=true) {
+function render_terrain(layers, seed=13, erosion=false, water=false) {
     set_render_button_inactive();
 
     // initialize seeded random number generator and noise function
@@ -698,9 +774,12 @@ function render_terrain(layers, seed=13, erosion=true, water=true) {
     // apply color
     geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
 
+    geometry.computeBoundsTree();
+
     // create height map from calculated data and add it to scene
     if (!terrain_mesh) {
         terrain_mesh = new THREE.Mesh(geometry, terrain_material);
+        terrain_mesh.layers.enable(1);
         terrain_mesh.rotation.x = -Math.PI / 2;
         scene.add(terrain_mesh);
         renderer.render(scene, camera);
