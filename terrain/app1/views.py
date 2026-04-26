@@ -3,8 +3,8 @@ from django.contrib.auth import authenticate, login, logout
 from django.http import JsonResponse, HttpResponse
 from django.contrib.auth.decorators import login_required
 from django.template.loader import render_to_string
-from app1.forms import JoinForm, LoginForm, InputLayerForm
-from app1.models import Profile, InputLayer
+from app1.forms import JoinForm, LoginForm, InputLayerForm, RiverSettingsForm
+from app1.models import Profile, InputLayer, RiverSettings
 
 # Create your views here.
 
@@ -111,7 +111,7 @@ def home(request):
 
         layer_forms.append(layer_data)
 
-    return render(request, "app1/home.html", {"layer_forms": layer_forms})
+    return render(request, "app1/home.html", {"layer_forms": layer_forms, 'river_settings_form': RiverSettingsForm(instance=request.user.profile.riversettings)})
 
 def join(request):
     if (request.method == "POST"):
@@ -126,6 +126,7 @@ def join(request):
 
             # Create user profile
             Profile.objects.create(user=user)
+            RiverSettings.objects.create(profile=user.profile);
 
             # Success! Redirect to home page.
             return redirect("/")
@@ -180,6 +181,19 @@ def save_layer(request):
     layer_id = request.POST.get("layer_id")
     layer = get_object_or_404(InputLayer, pk=layer_id, user=request.user)
     form = InputLayerForm(request.POST, instance=layer, prefix=f"layer-{layer_id}")
+    if form.is_valid():
+        form.save()
+        return JsonResponse({"ok": True})
+    return JsonResponse({"ok": False, "errors": form.errors}, status=400)
+
+
+@login_required(login_url='/login/')
+def save_river_settings(request):
+    if request.method != "POST":
+        return HttpResponse(status=405)
+
+    river_settings = get_object_or_404(RiverSettings, profile=request.user.profile)
+    form = RiverSettingsForm(request.POST, instance=river_settings)
     if form.is_valid():
         form.save()
         return JsonResponse({"ok": True})

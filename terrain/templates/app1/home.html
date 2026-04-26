@@ -93,7 +93,39 @@
                         </div>
                     </div>
                     <div id="additionalSettings" class="jumbotron">
-
+                        <h1 class="display-5">River Settings</h1>
+                        <form id="riverSettingsForm" class="w-25">
+                            {% csrf_token %}
+                            <!-- {% bootstrap_form river_settings_form %} -->
+                            <div class="form-group">
+                                <label for="{{ river_settings_form.max_width.id_for_label }}">
+                                    Max Width:
+                                    <span class="slider-value">{{ river_settings_form.max_width.value }}</span>
+                                </label>
+                                {{ river_settings_form.max_width }}
+                            </div>
+                            <div class="form-group">
+                                <label for="{{ river_settings_form.river_threshold.id_for_label }}">
+                                    River Threshold:
+                                    <span class="slider-value">{{ river_settings_form.river_threshold.value }}</span>
+                                </label>
+                                {{ river_settings_form.river_threshold }}
+                            </div>
+                            <div class="form-group">
+                                <label for="{{ river_settings_form.river_threshold_end.id_for_label }}">
+                                    River Threshold End:
+                                    <span class="slider-value">{{ river_settings_form.river_threshold_end.value }}</span>
+                                </label>
+                                {{ river_settings_form.river_threshold_end }}
+                            </div>
+                            <div class="form-group">
+                                <label for="{{ river_settings_form.width_beta.id_for_label }}">
+                                    Width Beta:
+                                    <span class="slider-value">{{ river_settings_form.width_beta.value }}</span>
+                                </label>
+                                {{ river_settings_form.width_beta }}
+                            </div>
+                        </form>
                     </div>
                 </div>
                 <div id="allListFrame" class="col-sm-3 d-flex flex-column">

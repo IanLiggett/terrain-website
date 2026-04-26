@@ -15,7 +15,47 @@
             </canvas>
             <form method="post" data-layer-id="{{layer.id}}">
                 {% csrf_token %}
-                {% bootstrap_form input_layer_form %}
+                <div class="form-group">
+                    <label for="{{ input_layer_form.name.id_for_label }}">
+                        Name:
+                    </label>
+                    {{ input_layer_form.name }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ input_layer_form.frequency.id_for_label }}">
+                        Frequency:
+                        <span class="slider-value">{{ input_layer_form.frequency.value }}</span>
+                    </label>
+                    {{ input_layer_form.frequency }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ input_layer_form.amplitude.id_for_label }}">
+                        Amplitude:
+                        <span class="slider-value">{{ input_layer_form.amplitude.value }}</span>
+                    </label>
+                    {{ input_layer_form.amplitude }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ input_layer_form.octaves.id_for_label }}">
+                        Octaves:
+                        <span class="slider-value">{{ input_layer_form.octaves.value }}</span>
+                    </label>
+                    {{ input_layer_form.octaves }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ input_layer_form.lacunarity.id_for_label }}">
+                        Lacunarity:
+                        <span class="slider-value">{{ input_layer_form.lacunarity.value }}</span>
+                    </label>
+                    {{ input_layer_form.lacunarity }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ input_layer_form.persistence.id_for_label }}">
+                        Persistence:
+                        <span class="slider-value">{{ input_layer_form.persistence.value }}</span>
+                    </label>
+                    {{ input_layer_form.persistence }}
+                </div>
             </form>
         </div>
     </div>

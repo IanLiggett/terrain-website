@@ -1,9 +1,13 @@
 import { export_scene_as_glb, generate_terrain, render_preview } from "./terrain.js";
 
+const riverSettingsForm = document.getElementById("riverSettingsForm");
 const newInputLayerForm = document.getElementById("newInputLayerForm");
 const activeLayersList = document.getElementById("activeList");
 const allLayersList = document.getElementById("allList");
 const globcsrfToken = document.querySelector("[name=csrfmiddlewaretoken]").value;
+
+
+const server_save_debounce = 1000;
 
 
 // ----- input layer state handling
@@ -70,6 +74,8 @@ async function set_layer_active(button) {
     if (layer_stick_element) {
         layer_stick_element.outerHTML = data.layer_stick;
     }
+
+    set_render_button_active();
 }
 
 async function set_layer_inactive(button) {
@@ -84,6 +90,8 @@ async function set_layer_inactive(button) {
     if (layer_stick_element) {
         layer_stick_element.outerHTML = layer_stick;
     }
+
+    set_render_button_active();
 }
 
 function is_active(button) {
@@ -109,6 +117,8 @@ async function delete_layer(button) {
 
     activeLayersList.querySelector("#layer-card-" + String(layer_id))?.remove();
     allLayersList.querySelector("#layer-stick-" + String(layer_id))?.remove();
+
+    set_render_button_active();
 }
 
 activeLayersList.addEventListener("click", async function(event) {
@@ -145,6 +155,17 @@ async function saveLayer(form) {
     if (!res.ok) console.error("Save failed:", res.status);
 }
 
+async function saveRiverSettings(form) {
+    const formData = new FormData(form);
+    const res = await fetch("/saveriversettings/", {
+        method: "POST",
+        body: formData,
+        headers: { "X-CSRFToken": globcsrfToken },
+        credentials: "same-origin",
+    });
+    if (!res.ok) console.error("Save failed:", res.status);
+}
+
 
 // ----- render control logic
 const renderButton = document.getElementById("renderButton");
@@ -161,6 +182,16 @@ function getLayerParams(form) {
         persistence: parseFloat(d.get(`${p}-persistence`)),
     };
 }
+
+function getRiverSettings(form) {
+    const d = new FormData(form);
+    return {
+        max_width: parseInt(d.get("max_width")),
+        river_threshold: parseFloat(d.get("river_threshold")),
+        river_threshold_end: parseFloat(d.get("river_threshold_end")),
+        width_beta: parseFloat(d.get("width_beta")),
+    }
+}   
 
 function set_render_button_active() {
     if (render_button_active) return;
@@ -191,7 +222,9 @@ renderButton.addEventListener("click", async function(event) {
         layers.push(getLayerParams(form));
     }
     
-    generate_terrain(layers);
+    const river_settings = getRiverSettings(riverSettingsForm);
+    
+    generate_terrain(layers, undefined, undefined, undefined, undefined, river_settings);
 });
 
 document.getElementById("exportButton").addEventListener("click", async function() {
@@ -210,22 +243,41 @@ function throttledPreview(form, canvas) {
     });
 }
 
-// Debounce — wait 500ms after last change before saving
+// Debounce — wait server_save_debounce ms after last change before saving
 let saveTimer = null;
-function debouncedSave(form) {
+function debouncedSave(form, saveFunction) {
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => saveLayer(form), 500);
+    saveTimer = setTimeout(() => saveFunction(form), server_save_debounce);
 }
 
+// Keep preview up to date and save changes
 activeLayersList.addEventListener("input", function(event) {
     const form = event.target.closest("form[data-layer-id]");
     if (!form) return;
     set_render_button_active();
     const canvas = document.getElementById(`preview-${form.dataset.layerId}`);
     if (canvas) throttledPreview(form, canvas);
-    debouncedSave(form);
+    debouncedSave(form, saveLayer);
 });
 
 document.querySelectorAll("#activeList form[data-layer-id]").forEach(form => {
     initLayerCard(form.dataset.layerId);
+});
+
+
+riverSettingsForm.addEventListener("input", function() {
+    set_render_button_active();
+    debouncedSave(this, saveRiverSettings);
+});
+
+
+// Keep slider values up to date
+document.addEventListener("input", function(event) {
+    if (!event.target.matches('input[type="range"]')) return;
+
+    const wrapper = event.target.closest(".form-group");
+    const value_el = wrapper?.querySelector(".slider-value");
+    if (value_el) {
+        value_el.textContent = event.target.value;
+    }
 });

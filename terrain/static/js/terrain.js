@@ -280,7 +280,7 @@ function linear_falloff(distance, max_distance) {
   return Math.max(0, 1 - (distance / max_distance));
 }
 
-function add_water_to_terrain(geometry, colors, has_rivers) {
+function add_water_to_terrain(geometry, colors, has_rivers, river_settings) {
     const position = geometry.getAttribute("position");
     const positions_array = position.array;
     const plane_width = geometry.parameters.widthSegments + 1;
@@ -302,21 +302,21 @@ function add_water_to_terrain(geometry, colors, has_rivers) {
 
     // How much the water rises per iteration during priority flood filling
     const dz = 0.002;
-
     // how high of a bank a river can overcome
     const bank_tolerance = 0.05;
-
     // min and max blue coloring for the water
     const min_alpha = 0.5;
     const max_alpha = 0.7;
     
     // definition of a river based on water accumulation
-    const min_river = 1000;
-    const max_river = 100000;
-    const river_range = max_river - min_river;
-
+    const min_river = (5000/0.1) * river_settings.river_threshold;
+    const max_river = (500000) * river_settings.river_threshold_end;
     // power to scale width of rivers non linearly
-    const width_beta = 0.5;
+    const width_beta = river_settings.width_beta;
+    const max_width = river_settings.max_width;
+
+    const steepness_thinning = 2;
+    const river_range = max_river - min_river;
 
     const queue = new Denque();
 
@@ -398,18 +398,32 @@ function add_water_to_terrain(geometry, colors, has_rivers) {
 
     // river logic
     if (has_rivers) {
-        // iterate over all the trees produced by the priority flood, starting at the leaf nodes
+        // iterate backwards through the trees produced by the priority flood, starting at the leaf nodes
         while (true) {
             const ci = queue.shift();
             if (ci == null) break;
 
+            const receiver = receivers[ci];
+
             // each node popped off the queue has a finalized accumulation, so check if its built up enough to form a visible river
             const acc = accumulation[ci];
             if (acc >= min_river && !water[ci]) {
-                // calculate river strength and width using ranges and non linear scaling to restrain width for large rivers
+                const {x, y} = get_xy_from_i(ci, plane_width);
+                const cz = positions_array[ci * 3 + 2];
+
+                let slope_factor = 1;
+                // if (receiver != null) {
+                //     const { x: rx, y: ry } = get_xy_from_i(receiver, plane_width);
+                //     const dxy = Math.hypot(x - rx, y - ry);
+                //     const dz = Math.max(cz - positions_array[receiver * 3 + 2], 0);
+
+                //     const grade = Math.max(0, Math.min((dz / Math.max(dxy, 1e-6)) * steepness_thinning, 1));
+                //     slope_factor = lerp(1, 0.1, grade);
+                // }
+
+                // calculate river strength and width using ranges and non linear scaling to restrain width for large rivers, with steeper rivers being thinner
                 const river_strength = Math.max(Math.min((acc - min_river) / river_range, 1), 0);
-                // const width = Math.max(1, Math.round(lerp(1, 10, Math.pow(river_strength, width_beta))));
-                const width = Math.floor(lerp(0, 10, Math.pow(river_strength, width_beta)));
+                const width = Math.floor(lerp(0, max_width * slope_factor, Math.pow(river_strength, width_beta)));
 
                 // calculate the water brightness at the center of the river
                 const center_alpha = lerp(min_alpha, max_alpha, river_strength);
@@ -418,8 +432,6 @@ function add_water_to_terrain(geometry, colors, has_rivers) {
                 }
 
                 // paint the surrounding nodes water_mask values based on the current nodes river strength and width
-                const {x, y} = get_xy_from_i(ci, plane_width);
-                const cz = positions_array[ci * 3 + 2];
                 for (let dx = -width; dx <= width; dx++) {
                     const nx = x + dx;
                     if (nx < 0 || nx >= plane_width) continue;
@@ -453,7 +465,6 @@ function add_water_to_terrain(geometry, colors, has_rivers) {
             }
 
             // check if node has a parent
-            const receiver = receivers[ci];
             if (receiver == null) continue;
 
             // add its accumulation to its parent
@@ -504,7 +515,7 @@ function calculate_terrain_noise(layers, geometry, noise2d) {
 }
 
 // main function which uses the scene to render the terrain
-export function generate_terrain(layers, seed=13, has_erosion=true, has_water=true, has_rivers=true) {
+export function generate_terrain(layers, seed=13, has_erosion=true, has_water=true, has_rivers=true, river_settings=null) {
     // initialize seeded random number generator and noise function
     const prng = Alea(seed);
     const noise2d = createNoise2D(prng);
@@ -522,7 +533,7 @@ export function generate_terrain(layers, seed=13, has_erosion=true, has_water=tr
 
     // water!
     if (has_water) {
-        add_water_to_terrain(geometry, colors, has_rivers);
+        add_water_to_terrain(geometry, colors, has_rivers, river_settings);
         // recalculate normals to fix water surface
         geometry.computeVertexNormals();
     }
