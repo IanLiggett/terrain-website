@@ -95,7 +95,7 @@ renderer.setAnimationLoop((time) => {
 export function set_camera_parent(parent, camera_offset) {
     parent.add(camera);
     camera.position.copy(camera_offset);
-    camera.lookAt(0, 0, 0);
+    camera.lookAt(parent.localToWorld(new THREE.Vector3(0, 0, 0)));
 }
 
 export function add_object_to_scene(object) {

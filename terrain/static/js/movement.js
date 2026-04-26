@@ -4,6 +4,7 @@ import { set_camera_parent, bind_to_animation_loop, bind_event_to_render_window,
 
 const camera_offset = new THREE.Vector3(0, 0.2, -0.35);
 
+const cube_start = new THREE.Vector3(0, 8, -15);
 const cube_position = new THREE.Vector3();
 const height_offset = 0.1;
 
@@ -37,10 +38,11 @@ function snap_cube_to_floor(camera_cube, height) {
 }
 
 function new_camera_cube() {
-    const cube_geometry = new THREE.BoxGeometry(0.02, 0.02, 0.02);
+    const cube_geometry = new THREE.BoxGeometry(0.00, 0.00, 0.00);
     const cube_material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
     const camera_cube = new THREE.Mesh(cube_geometry, cube_material);
-    camera_cube.visible = false;
+    camera_cube.position.copy(cube_start);
+    camera_cube.visible = true;
     set_camera_parent(camera_cube, camera_offset);
     add_object_to_scene(camera_cube);
 
@@ -59,7 +61,7 @@ window.load_user_controls = function load_user_controls() {
 
     const rotate_speed = 0.01;
 
-    let height = 0;
+    let height = cube_start.y;
 
     let x_momentum = 0;
     let y_momentum = 0;
@@ -140,6 +142,8 @@ window.load_user_controls = function load_user_controls() {
         camera_cube.translateZ(y_velocity * dt);
         camera_cube.rotation.y += rotate_velocity * rotate_speed;
 
+        // if (x_velocity !== 0 || z_velocity !== 0) {
         height = snap_cube_to_floor(camera_cube, height + z_velocity * dt);
+        // }
     })
 };
