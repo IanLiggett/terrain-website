@@ -1,0 +1,231 @@
+import { export_scene_as_glb, generate_terrain, render_preview } from "./terrain.js";
+
+const newInputLayerForm = document.getElementById("newInputLayerForm");
+const activeLayersList = document.getElementById("activeList");
+const allLayersList = document.getElementById("allList");
+const globcsrfToken = document.querySelector("[name=csrfmiddlewaretoken]").value;
+
+
+// ----- input layer state handling
+
+newInputLayerForm.addEventListener("submit", async function(event) {
+    event.preventDefault();
+
+    const csrfToken = newInputLayerForm.querySelector("[name=csrfmiddlewaretoken]").value;
+
+    const response = await fetch("createlayer/", {
+      method: "POST",
+      headers: {
+        "X-CSRFToken": csrfToken,
+      },
+      credentials: "same-origin",
+    });
+
+    if (!response.ok) {
+        console.error("Failed to create new input layer: " + response.status);
+        return;
+    }
+
+    const data = await response.json();
+
+    activeLayersList.insertAdjacentHTML("afterbegin", data.layer_card);
+    allLayersList.insertAdjacentHTML("afterbegin", data.layer_stick);
+    initLayerCard(data.layer_id);
+});
+
+// helper function to update the state of a layer
+async function request_layer_update(layer_id, url) {
+    const formData = new FormData();
+    formData.append("layer_id", layer_id);
+
+    const response = await fetch(url, {
+        method: "POST",
+        body: formData,
+        headers: {
+            "X-CSRFToken": globcsrfToken,
+        },
+        credentials: "same-origin",
+    });
+
+    // const data = await response.json();
+    if (!response.ok) {
+        console.error("Failed to update layer: " + response.status);
+        return {"response": response, "success": false};
+    }
+
+    return {"response": response, "success": true};
+}
+
+async function set_layer_active(button) {
+    const layer_id = button.dataset.layerId;
+
+    const {response, success} = await request_layer_update(layer_id, "activatelayer/");
+    if (!success) return;
+
+    const data = await response.json();
+
+    activeLayersList.insertAdjacentHTML("afterbegin", data.layer_card);
+    initLayerCard(data.layer_id);
+    const layer_stick_element = allLayersList.querySelector("#layer-stick-" + String(layer_id));
+    if (layer_stick_element) {
+        layer_stick_element.outerHTML = data.layer_stick;
+    }
+}
+
+async function set_layer_inactive(button) {
+    const layer_id = button.dataset.layerId;
+
+    const {response, success} = await request_layer_update(layer_id, "deactivatelayer/");
+    if (!success) return;
+
+    const layer_stick = await response.text();
+    activeLayersList.querySelector("#layer-card-" + String(layer_id))?.remove();
+    const layer_stick_element = allLayersList.querySelector("#layer-stick-" + String(layer_id));
+    if (layer_stick_element) {
+        layer_stick_element.outerHTML = layer_stick;
+    }
+}
+
+function is_active(button) {
+    return button.dataset.active === "1"
+}
+
+allLayersList.addEventListener("click", async function(event) {
+    const button = event.target.closest(".toggle-layer-btn");
+    if (!button) return;
+
+    if (is_active(button)) {
+        set_layer_inactive(button);
+    } else {
+        set_layer_active(button);
+    }
+});
+
+async function delete_layer(button) {
+    const layer_id = button.dataset.layerId;
+
+    const {response, success} = await request_layer_update(layer_id, "deletelayer/");
+    if (!success) return;
+
+    activeLayersList.querySelector("#layer-card-" + String(layer_id))?.remove();
+    allLayersList.querySelector("#layer-stick-" + String(layer_id))?.remove();
+}
+
+activeLayersList.addEventListener("click", async function(event) {
+    const setInactiveButton = event.target.closest(".move-to-inactive-btn");
+    if (setInactiveButton) {
+        set_layer_inactive(setInactiveButton);
+        return;
+    }
+
+    const deleteLayerButton = event.target.closest(".delete-layer-btn");
+    if (deleteLayerButton) {
+        delete_layer(deleteLayerButton);
+        return;
+    }
+})
+
+function initLayerCard(layerId) {
+    const form = document.querySelector(`#layer-card-${layerId} form[data-layer-id]`);
+    const canvas = document.getElementById(`preview-${layerId}`);
+    if (!form || !canvas) return;
+    render_preview(canvas, getLayerParams(form));
+}
+
+async function saveLayer(form) {
+    const layerId = form.dataset.layerId;
+    const formData = new FormData(form);
+    formData.append("layer_id", layerId);
+    const res = await fetch("/savelayer/", {
+        method: "POST",
+        body: formData,
+        headers: { "X-CSRFToken": globcsrfToken },
+        credentials: "same-origin",
+    });
+    if (!res.ok) console.error("Save failed:", res.status);
+}
+
+
+// ----- render control logic
+const renderButton = document.getElementById("renderButton");
+let render_button_active = true;
+
+function getLayerParams(form) {
+    const d = new FormData(form);
+    const p = `layer-${form.dataset.layerId}`;
+    return {
+        frequency:   parseFloat(d.get(`${p}-frequency`)),
+        amplitude:   parseFloat(d.get(`${p}-amplitude`)),
+        octaves:     parseInt(d.get(`${p}-octaves`)),
+        lacunarity:  parseFloat(d.get(`${p}-lacunarity`)),
+        persistence: parseFloat(d.get(`${p}-persistence`)),
+    };
+}
+
+function set_render_button_active() {
+    if (render_button_active) return;
+    render_button_active = true;
+
+    renderButton.removeAttribute("disabled");
+    renderButton.classList.remove("btn-secondary");
+    renderButton.classList.add("active");
+    renderButton.classList.add("btn-primary");
+}
+
+function set_render_button_inactive() {
+    if (!render_button_active) return;
+    render_button_active = false;
+
+    renderButton.setAttribute("disabled", true);
+    renderButton.classList.remove("btn-primary");
+    renderButton.classList.remove("active");
+    renderButton.classList.add("btn-secondary");
+}
+
+renderButton.addEventListener("click", async function(event) {
+    set_render_button_inactive();
+
+    const layers = [];
+    for (const layer_card of activeLayersList.children) {
+        const form = layer_card.querySelector("form[data-layer-id]");
+        layers.push(getLayerParams(form));
+    }
+    
+    generate_terrain(layers);
+});
+
+document.getElementById("exportButton").addEventListener("click", async function() {
+    export_scene_as_glb(scene);
+})
+
+
+// Throttle via rAF — skip frames if one is already queued
+let rafPending = false;
+function throttledPreview(form, canvas) {
+    if (rafPending) return;
+    rafPending = true;
+    requestAnimationFrame(() => {
+        render_preview(canvas, getLayerParams(form));
+        rafPending = false;
+    });
+}
+
+// Debounce — wait 500ms after last change before saving
+let saveTimer = null;
+function debouncedSave(form) {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => saveLayer(form), 500);
+}
+
+activeLayersList.addEventListener("input", function(event) {
+    const form = event.target.closest("form[data-layer-id]");
+    if (!form) return;
+    set_render_button_active();
+    const canvas = document.getElementById(`preview-${form.dataset.layerId}`);
+    if (canvas) throttledPreview(form, canvas);
+    debouncedSave(form);
+});
+
+document.querySelectorAll("#activeList form[data-layer-id]").forEach(form => {
+    initLayerCard(form.dataset.layerId);
+});

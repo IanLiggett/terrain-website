@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { GLTFExporter } from "three/addons/exporters/GLTFExporter.js";
-import { Sky } from 'three/addons/objects/Sky.js';
 import {
   acceleratedRaycast,
   computeBoundsTree,
@@ -11,16 +10,28 @@ import Alea from 'https://cdn.jsdelivr.net/npm/alea@1.0.1/+esm';
 import { MinPriorityQueue, MaxPriorityQueue, PriorityQueue } from "https://esm.sh/@datastructures-js/priority-queue@6.3.5";
 import Denque from 'https://esm.sh/denque';
 
-const middle_column = document.getElementById("middleColumn");
-const render_window_frame = document.getElementById("renderWindowFrame");
+import { add_object_to_scene } from './scene.js';
 
-function render_window_size() {
-    return {"window_width": render_window_frame.clientWidth, "window_height": middle_column.clientHeight / 2};
-}
-function camera_perspective() {
-    const {window_width, window_height} = render_window_size();
-    return window_width / window_height;
-}
+// magic settings that make raycasting cheap
+THREE.Mesh.prototype.raycast = acceleratedRaycast;
+THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
+THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
+
+
+// raycaster used to find the terrain height
+const raycaster = new THREE.Raycaster();
+const down = new THREE.Vector3(0, -1, 0);
+const hits = [];
+
+raycaster.firstHitOnly = true;
+raycaster.layers.set(1);
+raycaster.near = 0;
+raycaster.far = 200;
+
+
+// terrain state and settings
+let terrain_mesh = null;
+const terrain_material = new THREE.MeshStandardMaterial({ vertexColors: true });
 
 const terrain_width_real = 40;
 const terrain_height_real = 40;
@@ -31,249 +42,8 @@ const terrain_height = 500;
 const previewWidth = 100;
 const previewHeight = 50;
 
-let active_layers = null;
-let active_noise = null;
-
-// create scene and camera
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(75, camera_perspective(), 0.1, 1000);
-camera.position.y = 0.2;
-camera.position.z = -0.35;
-
-
-// create renderer and add it to the page
-const renderer = new THREE.WebGLRenderer();
-renderer.outputColorSpace = THREE.SRGBColorSpace;
-// renderer.toneMapping = THREE.ACESFilmicToneMapping;
-// renderer.toneMappingExposure = 0.6;
-
-const render_window = renderer.domElement;
-render_window.id = "render_window";
-render_window.setAttribute("tabindex", "0");
-render_window_frame.prepend(render_window);
-
-
-// create skybox so we're totally not in an infinite void
-const sky = new Sky();
-sky.scale.setScalar(200);
-scene.add(sky);
-
-const uniforms = sky.material.uniforms;
-const sun = new THREE.Vector3();
-
-// renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.toneMapping = THREE.NoToneMapping;
-renderer.toneMappingExposure = 1.0;
-
-uniforms.turbidity.value = 3;
-uniforms.rayleigh.value = 3;
-uniforms.mieCoefficient.value = 0.0005;
-uniforms.mieDirectionalG.value = 0.9;
-
-const elevation = 5;
-const azimuth = 180;
-const distance = 450000;
-
-const phi = THREE.MathUtils.degToRad(90 - elevation);
-const theta = THREE.MathUtils.degToRad(azimuth);
-
-sun.setFromSphericalCoords(distance, phi, theta);
-uniforms.sunPosition.value.copy(sun);
-
-const sunLight = new THREE.DirectionalLight(0xffc07d, 1.5);
-sunLight.position.copy(sun).multiplyScalar(100);
-scene.add(sunLight);
-
-const ambient = new THREE.AmbientLight(0xffffff, 0.5);
-scene.add(ambient);
-
-scene.fog = new THREE.Fog(0xcccccc, 30, 100);
-
-// create users cube that the camera locks to
-const cube_geometry = new THREE.BoxGeometry(0.02, 0.02, 0.02);
-const cube_material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-const camera_cube = new THREE.Mesh(cube_geometry, cube_material);
-camera_cube.visible = false;
-camera.lookAt(camera_cube.position);
-camera_cube.add(camera);
-scene.add(camera_cube);
-
-let terrain_mesh = null;
-const terrain_material = new THREE.MeshStandardMaterial({ vertexColors: true });
-
-// keybinds for movement controls
-const move_directions = {
-    d: [-1, 0],
-    a: [1, 0],
-    w: [0, 1],
-    s: [0, -1],
-};
-
-const rotate_directions = {
-    ArrowRight: -1,
-    ArrowLeft: 1,
-    "2": 1,
-    "3": -1,
-}
-
-const elevation_directions = {
-    e: 1,
-    q: -1,
-}
-
-THREE.Mesh.prototype.raycast = acceleratedRaycast;
-THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
-THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
-
-// optional with three-mesh-bvh:
-const raycaster = new THREE.Raycaster();
-const down = new THREE.Vector3(0, -1, 0);
-const origin = new THREE.Vector3();
-const hits = [];
-
-raycaster.firstHitOnly = true;
-raycaster.layers.set(1);
-raycaster.near = 0;
-raycaster.far = 200;
-
-function snap_cube_to_floor(camera_cube, height) {
-    camera_cube.getWorldPosition(origin);
-    origin.y += 100;
-
-    raycaster.set(origin, down);
-
-    hits.length = 0;
-    raycaster.intersectObject(terrain_mesh, false, hits);
-
-    if (hits.length > 0) {
-    height = Math.max(hits[0].point.y + 0.1, height)
-    camera_cube.position.y = height;
-    }
-
-    return height;
-}
-
-// user controls to allow user to traverse scene
-window.load_user_controls = function load_user_controls() {
-    render_window_frame.addEventListener("click", () => {
-        render_window.focus();
-    });
-
-    const max_dt = 1/30;
-
-    const max_speed = 5;
-    const acceleration = 20;
-    const slowdown = 12;
-
-    const rotate_speed = 0.01;
-
-    const min_height = 0.1;
-    let height = min_height;
-
-    let x_momentum = 0;
-    let y_momentum = 0;
-    let z_momentum = 0;
-    let x_velocity = 0;
-    let y_velocity = 0;
-    let z_velocity = 0;
-
-    let rotate_momentum = 0;
-    let rotate_velocity = 0;
-
-    let last_time = 0;
-
-    function update_momentums(event, direction) {
-        if (event.repeat || terrain_mesh === null) return;
-        
-        const move_direction = move_directions[event.key];
-        if (move_direction) {
-            x_momentum += move_direction[0] * direction;
-            y_momentum += move_direction[1] * direction;
-        };
-
-        const rotate_direction = rotate_directions[event.key];
-        if (rotate_direction) {
-            rotate_momentum += rotate_direction * direction;
-        }
-
-        const elevation_direction = elevation_directions[event.key]
-        if (elevation_direction) {
-            z_momentum += elevation_direction * direction;
-        }
-    }
-
-    render_window.addEventListener("keydown", (event) => {
-        update_momentums(event, 1);
-    });
-
-    render_window.addEventListener("keyup", (event) => {
-        update_momentums(event, -1);
-    });
-
-    renderer.setAnimationLoop((time) => {
-        if (terrain_mesh === null) return;
-
-        const dt = Math.min(last_time ? (time - last_time) / 1000 : 0, max_dt);
-        last_time = time;
-
-        if (x_momentum !== 0) {
-            x_velocity += x_momentum * acceleration * dt;
-        } else {
-            x_velocity -= x_velocity * slowdown * dt;
-        }
-
-        if (y_momentum !== 0) {
-            y_velocity += y_momentum * acceleration * dt;
-        } else {
-            y_velocity -= y_velocity * slowdown * dt;
-        }
-
-        if (z_momentum !== 0) {
-            z_velocity += z_momentum * acceleration * dt;
-        } else {
-            z_velocity -= z_velocity * slowdown * dt;
-        }
-
-        if (rotate_momentum != 0) {
-            rotate_velocity += rotate_momentum * acceleration * dt;
-        } else {
-            rotate_velocity -= rotate_velocity * slowdown * dt
-        }
-
-        x_velocity = Math.max(-max_speed, Math.min(max_speed, x_velocity));
-        y_velocity = Math.max(-max_speed, Math.min(max_speed, y_velocity));
-        z_velocity = Math.max(-max_speed, Math.min(max_speed, z_velocity));
-        rotate_velocity = Math.max(-max_speed, Math.min(max_speed, rotate_velocity));
-
-        camera_cube.translateX(x_velocity * dt);
-        camera_cube.translateZ(y_velocity * dt);
-        camera_cube.rotation.y += rotate_velocity * rotate_speed;
-
-        height = height + z_velocity * dt;
-
-        if (active_layers) {
-            height = snap_cube_to_floor(camera_cube, height);
-        }
-
-        renderer.render(scene, camera);
-    });
-};
-
-function resize_render_window() {
-    const {window_width, window_height} = render_window_size();
-
-    renderer.setSize(window_width, window_height, false);
-    camera.aspect = window_width / window_height;
-    camera.updateProjectionMatrix();
-    renderer.render(scene, camera);
-}
-
-// size renderer to current frame and listen for changes
-resize_render_window();
-const observer = new ResizeObserver(resize_render_window);
-observer.observe(render_window_frame);
-
-// array for iterating over neighbors cleanly
+// arrays for iterating over neighbors cleanly
+// terrain got 8 grid priviledges revoked for not playing nicely with erosion algorithm
 const neighbor_offsets = [
     [1, 0],
     [-1, 0],
@@ -281,6 +51,7 @@ const neighbor_offsets = [
     [0, -1]
 ]
 
+// water gets to be an 8 grid so it can flow diagonally, it looks better
 const water_neighbor_offsets = [
     [1, 0],
     [-1, 0],
@@ -703,15 +474,10 @@ function calculate_terrain_noise(layers, geometry, noise2d) {
 }
 
 // main function which uses the scene to render the terrain
-function render_terrain(layers, seed=13, erosion=true, water=true) {
-    set_render_button_inactive();
-
+export function generate_terrain(layers, seed=13, erosion=true, water=true, rivers=true) {
     // initialize seeded random number generator and noise function
     const prng = Alea(seed);
     const noise2d = createNoise2D(prng);
-
-    active_layers = layers;
-    active_noise = noise2d;
 
     // create geometry and populate it with height map
     const geometry = new THREE.PlaneGeometry(terrain_width_real, terrain_height_real, terrain_width, terrain_height);
@@ -734,6 +500,7 @@ function render_terrain(layers, seed=13, erosion=true, water=true) {
     // apply color
     geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
 
+    // supposedly makes raycasting faster
     geometry.computeBoundsTree();
 
     // create height map from calculated data and add it to scene
@@ -741,25 +508,23 @@ function render_terrain(layers, seed=13, erosion=true, water=true) {
         terrain_mesh = new THREE.Mesh(geometry, terrain_material);
         terrain_mesh.layers.enable(1);
         terrain_mesh.rotation.x = -Math.PI / 2;
-        scene.add(terrain_mesh);
-        renderer.render(scene, camera);
-        // optimization that might be pointless
+        terrain_mesh.updateMatrix();
         terrain_mesh.matrixAutoUpdate = false;
+        add_object_to_scene(terrain_mesh);
     } else {
         terrain_mesh.geometry.dispose();
         terrain_mesh.geometry = geometry;
-
-        renderer.render(scene, camera);
     }
 }
-// render_terrain();
 
-function renderPreview(canvas, params) {
+export function render_preview(canvas, params) {
     const { frequency, amplitude, octaves, lacunarity, persistence } = params;
     const max = calculate_extreme_noise(amplitude, octaves, persistence, 1);
     const min = calculate_extreme_noise(amplitude, octaves, persistence, -1);
 
-    const prng = Alea(6);
+    // seed is hardcoded here, if we wanted to be extremely precise we could track active seed and use that here,
+    // but preview has other imprecisions that would make this pointless at the moment
+    const prng = Alea(0);
     const noise2d = createNoise2D(prng);
     const imageData = canvas.getContext('2d').createImageData(previewWidth, previewHeight);
     const data = imageData.data;
@@ -776,7 +541,21 @@ function renderPreview(canvas, params) {
     canvas.getContext('2d').putImageData(imageData, 0, 0);
 }
 
-function saveGLBData(data) {
+export function get_height_at_xz(x, z) {
+    const origin = new THREE.Vector3(x, 100, z);
+
+    raycaster.set(origin, down);
+    hits.length = 0;
+    raycaster.intersectObject(terrain_mesh, false, hits);
+
+    return (hits.length > 0)? hits[0].point.y : 0;
+}
+
+export function is_terrain_loaded() {
+    return terrain_mesh != null;
+}
+
+function save_GLB_data(data) {
     const blob = new Blob([data], { type: 'text/plain' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
@@ -784,231 +563,8 @@ function saveGLBData(data) {
     link.click();
 }
 
-function exportSceneAsGLB(scene) {
+export function export_scene_as_glb(scene) {
     const options = { binary: true };
     const exporter = new GLTFExporter();
-    exporter.parse(scene, saveGLBData, null, options);
+    exporter.parse(scene, save_GLB_data, null, options);
 }
-
-
-
-const newInputLayerForm = document.getElementById("newInputLayerForm");
-const activeLayersList = document.getElementById("activeList");
-const allLayersList = document.getElementById("allList");
-const globcsrfToken = document.querySelector("[name=csrfmiddlewaretoken]").value;
-
-newInputLayerForm.addEventListener("submit", async function(event) {
-    event.preventDefault();
-
-    const csrfToken = newInputLayerForm.querySelector("[name=csrfmiddlewaretoken]").value;
-
-    const response = await fetch("createlayer/", {
-      method: "POST",
-      headers: {
-        "X-CSRFToken": csrfToken,
-      },
-      credentials: "same-origin",
-    });
-
-    if (!response.ok) {
-        console.error("Failed to create new input layer: " + response.status)
-        return;
-    }
-
-    const data = await response.json();
-
-    activeLayersList.insertAdjacentHTML("afterbegin", data.layer_card);
-    allLayersList.insertAdjacentHTML("afterbegin", data.layer_stick);
-    initLayerCard(data.layer_id);
-});
-
-async function request_layer_update(layer_id, url) {
-    const formData = new FormData();
-    formData.append("layer_id", layer_id);
-
-    const response = await fetch(url, {
-        method: "POST",
-        body: formData,
-        headers: {
-            "X-CSRFToken": globcsrfToken,
-        },
-        credentials: "same-origin",
-    });
-
-    // const data = await response.json();
-    if (!response.ok) {
-        console.error("Failed to update layer: " + response.status);
-        return {"response": response, "success": false};
-    }
-
-    return {"response": response, "success": true};
-}
-
-function is_active(button) {
-    return button.dataset.active === "1"
-}
-
-async function set_layer_active(button) {
-    const layer_id = button.dataset.layerId;
-
-    const {response, success} = await request_layer_update(layer_id, "activatelayer/");
-    if (!success) return;
-
-    const data = await response.json();
-
-    activeLayersList.insertAdjacentHTML("afterbegin", data.layer_card);
-    initLayerCard(data.layer_id);
-    const layer_stick_element = allLayersList.querySelector("#layer-stick-" + String(layer_id));
-    if (layer_stick_element) {
-        layer_stick_element.outerHTML = data.layer_stick;
-    }
-}
-
-async function set_layer_inactive(button) {
-    const layer_id = button.dataset.layerId;
-
-    const {response, success} = await request_layer_update(layer_id, "deactivatelayer/");
-    if (!success) return;
-
-    const layer_stick = await response.text();
-    activeLayersList.querySelector("#layer-card-" + String(layer_id))?.remove();
-    const layer_stick_element = allLayersList.querySelector("#layer-stick-" + String(layer_id));
-    if (layer_stick_element) {
-        layer_stick_element.outerHTML = layer_stick;
-    }
-}
-
-allLayersList.addEventListener("click", async function(event) {
-    const button = event.target.closest(".toggle-layer-btn");
-    if (!button) return;
-
-    if (is_active(button)) {
-        set_layer_inactive(button);
-    } else {
-        set_layer_active(button);
-    }
-});
-
-async function delete_layer(button) {
-    const layer_id = button.dataset.layerId;
-
-    const {response, success} = await request_layer_update(layer_id, "deletelayer/");
-    if (!success) return;
-
-    activeLayersList.querySelector("#layer-card-" + String(layer_id))?.remove();
-    allLayersList.querySelector("#layer-stick-" + String(layer_id))?.remove();
-}
-
-activeLayersList.addEventListener("click", async function(event) {
-    const setInactiveButton = event.target.closest(".move-to-inactive-btn");
-    if (setInactiveButton) {
-        set_layer_inactive(setInactiveButton);
-        return;
-    }
-
-    const deleteLayerButton = event.target.closest(".delete-layer-btn");
-    if (deleteLayerButton) {
-        delete_layer(deleteLayerButton);
-        return;
-    }
-})
-
-const renderButton = document.getElementById("renderButton");
-let button_active = true;
-
-function set_render_button_active() {
-    if (button_active) return;
-    button_active = true;
-
-    renderButton.removeAttribute("disabled");
-    renderButton.classList.remove("btn-secondary");
-    renderButton.classList.add("active");
-    renderButton.classList.add("btn-primary");
-}
-
-function set_render_button_inactive() {
-    if (!button_active) return;
-    button_active = false;
-
-    renderButton.setAttribute("disabled", true);
-    renderButton.classList.remove("btn-primary");
-    renderButton.classList.remove("active");
-    renderButton.classList.add("btn-secondary");
-}
-
-renderButton.addEventListener("click", async function(event) {
-    const layers = [];
-    for (const layer_card of activeLayersList.children) {
-        const form = layer_card.querySelector("form[data-layer-id]");
-        layers.push(getLayerParams(form));
-    }
-
-    render_terrain(layers);
-});
-
-exportButton.addEventListener("click", async function() {
-    exportSceneAsGLB(scene);
-})
-
-function getLayerParams(form) {
-    const d = new FormData(form);
-    const p = `layer-${form.dataset.layerId}`;
-    return {
-        frequency:   parseFloat(d.get(`${p}-frequency`)),
-        amplitude:   parseFloat(d.get(`${p}-amplitude`)),
-        octaves:     parseInt(d.get(`${p}-octaves`)),
-        lacunarity:  parseFloat(d.get(`${p}-lacunarity`)),
-        persistence: parseFloat(d.get(`${p}-persistence`)),
-    };
-}
-
-function initLayerCard(layerId) {
-    const form = document.querySelector(`#layer-card-${layerId} form[data-layer-id]`);
-    const canvas = document.getElementById(`preview-${layerId}`);
-    if (!form || !canvas) return;
-    renderPreview(canvas, getLayerParams(form));
-}
-
-async function saveLayer(form) {
-    const layerId = form.dataset.layerId;
-    const formData = new FormData(form);
-    formData.append("layer_id", layerId);
-    const res = await fetch("/savelayer/", {
-        method: "POST",
-        body: formData,
-        headers: { "X-CSRFToken": globcsrfToken },
-        credentials: "same-origin",
-    });
-    if (!res.ok) console.error("Save failed:", res.status);
-}
-
-// Throttle via rAF — skip frames if one is already queued
-let rafPending = false;
-function throttledPreview(form, canvas) {
-    if (rafPending) return;
-    rafPending = true;
-    requestAnimationFrame(() => {
-        renderPreview(canvas, getLayerParams(form));
-        rafPending = false;
-    });
-}
-
-// Debounce — wait 500ms after last change before saving
-let saveTimer = null;
-function debouncedSave(form) {
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => saveLayer(form), 500);
-}
-
-activeLayersList.addEventListener("input", function(event) {
-    const form = event.target.closest("form[data-layer-id]");
-    if (!form) return;
-    set_render_button_active();
-    const canvas = document.getElementById(`preview-${form.dataset.layerId}`);
-    if (canvas) throttledPreview(form, canvas);
-    debouncedSave(form);
-});
-
-document.querySelectorAll("#activeList form[data-layer-id]").forEach(form => {
-    initLayerCard(form.dataset.layerId);
-});

@@ -13,7 +13,14 @@
             }
         </script>
         <link rel="stylesheet" href="{% static 'terrain.css' %}">
-        <script type="module" src="{% static 'terrain.js' %}"></script>
+
+        <!-- <script type="module" src="{% static 'terrain.js' %}"></script> -->
+        <script type="module" src="{% static 'js/page.js' %}"></script>
+        <!-- <script type="module" src="{% static 'js/terrain.js' %}"></script>
+        <script type="module" src="{% static 'js/page.js' %}"></script>
+        <script type="module" src="{% static 'js/scene.js' %}"></script>
+        <script type="module" src="{% static 'js/movement.js' %}"></script> -->
+
         {% include "bootstrap.html" %}
     </head>
     <body onload="load_user_controls()">
