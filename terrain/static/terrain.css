@@ -5,10 +5,6 @@ html, body {
     overflow-x: hidden;
 }
 
-body {
-    overflow: hidden;
-}
-
 #mainWindow {
     height: 100vh;
     display: flex;
@@ -31,6 +27,21 @@ body {
     min-height: 0;
 }
 
+#middleColumn {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+}
+
+#riverSettingsFrame {
+    border-color: rgb(188, 188, 204);
+    border-width: 2px;
+    border-style: solid;
+    overflow-y: auto;
+    height: 320px;
+}
+
 #renderPreview {
     flex: 0 0 auto;
 }
@@ -47,3 +58,5 @@ body {
     min-height: 0;
     overflow-y: auto;
 }
+
+

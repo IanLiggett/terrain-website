@@ -31,7 +31,7 @@
                 </div>
             </div>
             <div id="contentRow" class="row">
-                <div id="leftColumn" class="col-sm-3 d-flex flex-column">
+                <div id="leftColumn" class="col-lg-3 col-12 d-flex flex-column">
                     <div id="activeListFrame" class="d-flex flex-column">
                         <div class="p-1 border border-primary bg-light rounded-top d-flex align-items-center">
                             <h3 class="mb-0">Active Layers</h3>
@@ -53,7 +53,7 @@
                         </div>
                     </div>
                 </div>
-                <div id="middleColumn" class="col-sm-6 d-flex flex-column">
+                <div id="middleColumn" class="col-lg-6 col-12 d-flex flex-column">
                     <div id="renderWindowFrame" class="row">
                         <button id="renderButton" class="col-sm-3 btn btn-primary active btn-lg">
                             RENDER
@@ -92,43 +92,44 @@
                             </div>
                         </div>
                     </div>
-                    <div id="additionalSettings" class="jumbotron">
-                        <h1 class="display-5">River Settings</h1>
-                        <form id="riverSettingsForm" class="w-25">
-                            {% csrf_token %}
-                            <!-- {% bootstrap_form river_settings_form %} -->
-                            <div class="form-group">
-                                <label for="{{ river_settings_form.max_width.id_for_label }}">
-                                    Max Width:
-                                    <span class="slider-value">{{ river_settings_form.max_width.value }}</span>
-                                </label>
-                                {{ river_settings_form.max_width }}
-                            </div>
-                            <div class="form-group">
-                                <label for="{{ river_settings_form.river_threshold.id_for_label }}">
-                                    River Threshold:
-                                    <span class="slider-value">{{ river_settings_form.river_threshold.value }}</span>
-                                </label>
-                                {{ river_settings_form.river_threshold }}
-                            </div>
-                            <div class="form-group">
-                                <label for="{{ river_settings_form.river_threshold_end.id_for_label }}">
-                                    River Threshold End:
-                                    <span class="slider-value">{{ river_settings_form.river_threshold_end.value }}</span>
-                                </label>
-                                {{ river_settings_form.river_threshold_end }}
-                            </div>
-                            <div class="form-group">
-                                <label for="{{ river_settings_form.width_beta.id_for_label }}">
-                                    Width Beta:
-                                    <span class="slider-value">{{ river_settings_form.width_beta.value }}</span>
-                                </label>
-                                {{ river_settings_form.width_beta }}
-                            </div>
-                        </form>
+                    <div id="additionalSettings" class="jumbotron min-height-0 flex-grow-1" style="padding: 0px; margin: 0;">
+                        <div id="riverSettingsFrame" class="w-50">
+                            <h3 class="display-5">River Settings</h3>
+                            <form id="riverSettingsForm" class="">
+                                {% csrf_token %}
+                                <div class="form-group">
+                                    <label for="{{ river_settings_form.max_width.id_for_label }}">
+                                        Max Width:
+                                        <span class="slider-value">{{ river_settings_form.max_width.value }}</span>
+                                    </label>
+                                    {{ river_settings_form.max_width }}
+                                </div>
+                                <div class="form-group">
+                                    <label for="{{ river_settings_form.river_threshold.id_for_label }}">
+                                        River Threshold:
+                                        <span class="slider-value">{{ river_settings_form.river_threshold.value }}</span>
+                                    </label>
+                                    {{ river_settings_form.river_threshold }}
+                                </div>
+                                <div class="form-group">
+                                    <label for="{{ river_settings_form.river_threshold_end.id_for_label }}">
+                                        River Threshold End:
+                                        <span class="slider-value">{{ river_settings_form.river_threshold_end.value }}</span>
+                                    </label>
+                                    {{ river_settings_form.river_threshold_end }}
+                                </div>
+                                <div class="form-group">
+                                    <label for="{{ river_settings_form.width_beta.id_for_label }}">
+                                        Width Beta:
+                                        <span class="slider-value">{{ river_settings_form.width_beta.value }}</span>
+                                    </label>
+                                    {{ river_settings_form.width_beta }}
+                                </div>
+                            </form>
+                        </div>
                     </div>
                 </div>
-                <div id="allListFrame" class="col-sm-3 d-flex flex-column">
+                <div id="allListFrame" class="col-lg-3 col-12 d-flex flex-column">
                     <div class="p-1 border border-primary rounded-top bg-light d-flex">
                         <h3>All Layers</h3>
                     </div>
