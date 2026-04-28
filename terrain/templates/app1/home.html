@@ -91,34 +91,10 @@
                             <h3 class="display-5">River Settings</h3>
                             <form id="riverSettingsForm" class="">
                                 {% csrf_token %}
-                                <div class="form-group">
-                                    <label for="{{ river_settings_form.max_width.id_for_label }}">
-                                        Max Width:
-                                        <span class="slider-value">{{ river_settings_form.max_width.value }}</span>
-                                    </label>
-                                    {{ river_settings_form.max_width }}
-                                </div>
-                                <div class="form-group">
-                                    <label for="{{ river_settings_form.river_threshold.id_for_label }}">
-                                        River Threshold:
-                                        <span class="slider-value">{{ river_settings_form.river_threshold.value }}</span>
-                                    </label>
-                                    {{ river_settings_form.river_threshold }}
-                                </div>
-                                <div class="form-group">
-                                    <label for="{{ river_settings_form.river_threshold_end.id_for_label }}">
-                                        River Threshold End:
-                                        <span class="slider-value">{{ river_settings_form.river_threshold_end.value }}</span>
-                                    </label>
-                                    {{ river_settings_form.river_threshold_end }}
-                                </div>
-                                <div class="form-group">
-                                    <label for="{{ river_settings_form.width_beta.id_for_label }}">
-                                        Width Beta:
-                                        <span class="slider-value">{{ river_settings_form.width_beta.value }}</span>
-                                    </label>
-                                    {{ river_settings_form.width_beta }}
-                                </div>
+                                {% include "formfieldwithtooltip.html" with field=river_settings_form.max_width %}
+                                {% include "formfieldwithtooltip.html" with field=river_settings_form.river_threshold %}
+                                {% include "formfieldwithtooltip.html" with field=river_settings_form.river_threshold_end %}
+                                {% include "formfieldwithtooltip.html" with field=river_settings_form.width_beta %}
                             </form>
                         </div>
                     </div>

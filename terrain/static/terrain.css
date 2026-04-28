@@ -73,6 +73,22 @@ html, body {
 }
 
 
+.tool-tip-label {
+    float: right;
+    width: 20px;
+    height: 20px;
+    justify-content: center;
+    align-items: center;
+    display: inline-flex;
+    border: 1px solid black;
+    border-radius: 8px;
+    background-color: rgb(240, 229, 218);
+    color: black;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+
 /* 
 Extra large column settings since xl is slightly too cramped for current layout
 I don't know how to install bootstrap into this environment, which would let me do this in a more standard way

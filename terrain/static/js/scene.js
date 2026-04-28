@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { Sky } from 'three/addons/objects/Sky.js';
+import { GLTFExporter } from "three/addons/exporters/GLTFExporter.js";
 
 const middle_column = document.getElementById("middleColumn");
 const render_window_frame = document.getElementById("renderWindowFrame");
@@ -117,7 +118,7 @@ function save_GLB_data(data) {
     link.download = "test.glb";
     link.click();
 }
-export function export_scene_as_glb(scene) {
+export function export_scene_as_glb() {
     const options = { binary: true };
     const exporter = new GLTFExporter();
     exporter.parse(scene, save_GLB_data, null, options);

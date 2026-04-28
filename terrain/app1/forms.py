@@ -11,7 +11,8 @@ class InputLayerForm(forms.ModelForm):
             "name": forms.TextInput(attrs={
                 "class": "form-control",
                 "placeholder": "Enter name here",
-                "id": "layerNameInput"
+                "id": "layerNameInput",
+                "help_text": "A name to help you identify this layer later."
             }),
             "frequency": forms.NumberInput(attrs={
                 "type": "range",
@@ -19,6 +20,7 @@ class InputLayerForm(forms.ModelForm):
                 "max": "1",
                 "step": "0.001",
                 "class": "form-control-range",
+                "help_text": "How often the noise pattern repeats across the terrain.<br>Lower values: smoother terrain<br>Higher values: frequent changes in elevation."
             }),
             "amplitude": forms.NumberInput(attrs={
                 "type": "range",
@@ -26,6 +28,7 @@ class InputLayerForm(forms.ModelForm):
                 "max": "6",
                 "step": "0.01",
                 "class": "form-control-range",
+                "help_text": "The maximum height variation caused by this layer.<br>Lower values: lower rises<br>Higher values: higher rises."
             }),
             "octaves": forms.NumberInput(attrs={
                 "type": "range",
@@ -33,6 +36,7 @@ class InputLayerForm(forms.ModelForm):
                 "max": "5",
                 "step": "1",
                 "class": "form-control-range",
+                "help_text": "The number of layers of noise to combine.<br>Lower values: simpler terrain<br>Higher values: more complex and detailed terrain."
             }),
             "lacunarity": forms.NumberInput(attrs={
                 "type": "range",
@@ -40,6 +44,7 @@ class InputLayerForm(forms.ModelForm):
                 "max": "3",
                 "step": "0.01",
                 "class": "form-control-range",
+                "help_text": "The frequency multiplier for each octave.<br>Lower values: more slowly changing terrain<br>Higher values: more rapidly changing terrain."
             }),
             "persistence": forms.NumberInput(attrs={
                 "type": "range",
@@ -47,6 +52,7 @@ class InputLayerForm(forms.ModelForm):
                 "max": "3",
                 "step": "0.01",
                 "class": "form-control-range",
+                "help_text": "The amplitude multiplier for each octave.<br>Lower values: lower rises in higher octaves<br>Higher values: higher rises in higher octaves."
             }),
         }
 
@@ -61,6 +67,7 @@ class RiverSettingsForm(forms.ModelForm):
                 "max": "20",
                 "step": "1",
                 "class": "form-control-range",
+                "help_text": "Maximum width of the river"
             }),
             "river_threshold": forms.NumberInput(attrs={
                 "type": "range",
@@ -68,6 +75,7 @@ class RiverSettingsForm(forms.ModelForm):
                 "max": "0.1",
                 "step": "0.001",
                 "class": "form-control-range",
+                "help_text": "Threshold after which a river will start.<br>Lower values: more rivers<br>Higher values: less rivers"
             }),
             "river_threshold_end": forms.NumberInput(attrs={
                 "type": "range",
@@ -75,6 +83,7 @@ class RiverSettingsForm(forms.ModelForm):
                 "max": "1",
                 "step": "0.01",
                 "class": "form-control-range",
+                "help_text": "Threshold at which a river will stop widening.<br>Lower values: widen faster<br>Higher values: widen slower"
             }),
             "width_beta": forms.NumberInput(attrs={
                 "type": "range",
@@ -82,6 +91,7 @@ class RiverSettingsForm(forms.ModelForm):
                 "max": "2",
                 "step": "0.1",
                 "class": "form-control-range",
+                "help_text": "How quickly a river widens, on a quadratic curve.<br>Lower values: widen faster<br>Higher values: widen slower"
             }),
         }
 

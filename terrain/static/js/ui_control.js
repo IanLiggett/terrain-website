@@ -10,6 +10,11 @@ const globcsrfToken = document.querySelector("[name=csrfmiddlewaretoken]").value
 
 const server_save_debounce = 1000;
 
+// enable all tooltips
+$(function () {
+  $('[data-toggle="tooltip"]').tooltip()
+})
+
 
 // ----- input layer state handling
 
@@ -248,7 +253,7 @@ renderButton.addEventListener("click", async function(event) {
 });
 
 document.getElementById("exportButton").addEventListener("click", async function() {
-    export_scene_as_glb(scene);
+    export_scene_as_glb();
 })
 
 
