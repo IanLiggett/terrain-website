@@ -106,6 +106,23 @@ export function bind_event_to_render_window(event_name, func) {
     render_window.addEventListener(event_name, func);
 }
 
+export function blur_render_window() {
+    render_window.blur();
+}
+
+function save_GLB_data(data) {
+    const blob = new Blob([data], { type: 'text/plain' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = "test.glb";
+    link.click();
+}
+export function export_scene_as_glb(scene) {
+    const options = { binary: true };
+    const exporter = new GLTFExporter();
+    exporter.parse(scene, save_GLB_data, null, options);
+}
+
 export function bind_to_animation_loop(func) {
     bound_animation_loop_functions.push(func);
 }

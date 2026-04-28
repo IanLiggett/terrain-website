@@ -1,4 +1,5 @@
-import { export_scene_as_glb, generate_terrain, render_preview } from "./terrain.js";
+import { generate_terrain, render_preview } from "./terrain.js";
+import { export_scene_as_glb } from "./scene.js";
 
 const riverSettingsForm = document.getElementById("riverSettingsForm");
 const newInputLayerForm = document.getElementById("newInputLayerForm");
@@ -146,7 +147,7 @@ function initLayerCard(layerId) {
     const name_box = form.querySelector(`input[name="layer-${layerId}-name"]`);
     const card_name_display = layer_card.querySelector(".layer-expand-btn");
     const stick_name_display = layer_stick_element.querySelector(".layer-stick-name");
-    
+
     // update the layer names on all the cards since otherwise with how its set up, a layer save on the server would have to return fresh cards and that is rather pointless for this
     name_box.addEventListener("change", function(event) {
         card_name_display.textContent = name_box.value;

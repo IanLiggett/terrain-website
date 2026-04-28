@@ -595,17 +595,3 @@ export function get_height_at_xz(x, z) {
 export function is_terrain_loaded() {
     return terrain_mesh != null;
 }
-
-function save_GLB_data(data) {
-    const blob = new Blob([data], { type: 'text/plain' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = "test.glb";
-    link.click();
-}
-
-export function export_scene_as_glb(scene) {
-    const options = { binary: true };
-    const exporter = new GLTFExporter();
-    exporter.parse(scene, save_GLB_data, null, options);
-}

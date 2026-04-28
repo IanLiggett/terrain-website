@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { get_height_at_xz, is_terrain_loaded } from "./terrain.js";
-import { set_camera_parent, bind_to_animation_loop, bind_event_to_render_window, add_object_to_scene } from "./scene.js";
+import { set_camera_parent, bind_to_animation_loop, bind_event_to_render_window, add_object_to_scene, blur_render_window } from "./scene.js";
 
 const camera_offset = new THREE.Vector3(0, 0.2, -0.35);
 
@@ -61,6 +61,8 @@ window.load_user_controls = function load_user_controls() {
 
     const rotate_speed = 0.01;
 
+    let keys = {};
+
     let height = cube_start.y;
 
     let x_momentum = 0;
@@ -75,9 +77,19 @@ window.load_user_controls = function load_user_controls() {
 
     let last_time = 0;
 
-    function update_momentums(event, direction) {
-        if (event.repeat || !is_terrain_loaded()) return;
-        
+    function reset_momentums() {
+        x_momentum = 0;
+        y_momentum = 0;
+        z_momentum = 0;
+        rotate_momentum = 0;
+    }
+    function reset_input_state() {
+        keys = {};
+        reset_momentums();
+        blur_render_window();
+    }
+
+    function update_momentums(event, direction) {        
         const move_direction = move_directions[event.key];
         if (move_direction) {
             x_momentum += move_direction[0] * direction;
@@ -96,11 +108,25 @@ window.load_user_controls = function load_user_controls() {
     }
 
     bind_event_to_render_window("keydown", (event) => {
+        if (event.repeat || !is_terrain_loaded || keys[event.key]) return;
+        keys[event.key] = true;
+        
         update_momentums(event, 1);
     })
-
     bind_event_to_render_window("keyup", (event) => {
+        if (!keys[event.key]) return;
+        keys[event.key] = false;
+        
         update_momentums(event, -1);
+    });
+
+    bind_event_to_render_window("focus", reset_momentums);
+    bind_event_to_render_window("focusout", reset_input_state);
+    bind_event_to_render_window("contextmenu", reset_input_state);
+    bind_event_to_render_window("pointercancel", reset_input_state);
+    window.addEventListener("blur", reset_input_state);
+    document.addEventListener("visibilitychange", () => {
+        if (document.hidden) reset_input_state();
     });
 
     bind_to_animation_loop((time) => {
