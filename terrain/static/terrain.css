@@ -60,3 +60,11 @@ html, body {
 }
 
 
+.layer-stick-name, .layer-expand-btn {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+

@@ -1,6 +1,6 @@
 <div id="layer-stick-{{ layer.id }}" class="bg-light border border-secondary row align-items-center mx-0">
-    <h3 class="col-sm-3 mb-0">{{ layer.name }}</h3>
-    <form class="col-sm-9 m-0 text-right" method="POST">
+    <h3 class="layer-stick-name col mb-0">{{ layer.name }}</h3>
+    <form class="col-auto m-0 text-right" method="POST">
         <button
             type="button"
             class="toggle-layer-btn btn {% if is_active %}btn-success{% else %}btn-outline-secondary{% endif %}"

@@ -136,10 +136,29 @@ activeLayersList.addEventListener("click", async function(event) {
 })
 
 function initLayerCard(layerId) {
-    const form = document.querySelector(`#layer-card-${layerId} form[data-layer-id]`);
+    const layer_card = document.querySelector(`#layer-card-${layerId}`);
+    const form = layer_card.querySelector(`form[data-layer-id="${layerId}"]`);
     const canvas = document.getElementById(`preview-${layerId}`);
     if (!form || !canvas) return;
     render_preview(canvas, getLayerParams(form));
+
+    const layer_stick_element = allLayersList.querySelector("#layer-stick-" + String(layerId));
+    const name_box = form.querySelector(`input[name="layer-${layerId}-name"]`);
+    const card_name_display = layer_card.querySelector(".layer-expand-btn");
+    const stick_name_display = layer_stick_element.querySelector(".layer-stick-name");
+    
+    // update the layer names on all the cards since otherwise with how its set up, a layer save on the server would have to return fresh cards and that is rather pointless for this
+    name_box.addEventListener("change", function(event) {
+        card_name_display.textContent = name_box.value;
+        stick_name_display.textContent = name_box.value;
+    });
+    // prevent automatic form submission for layer name change on enter, as it's saved to the server by another listener already, and submit would cause a page reload
+    name_box.addEventListener("keydown", function(event) {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            name_box.blur();
+        }
+    });
 }
 
 async function saveLayer(form) {
@@ -250,7 +269,7 @@ function debouncedSave(form, saveFunction) {
     saveTimer = setTimeout(() => saveFunction(form), server_save_debounce);
 }
 
-// Keep preview up to date and save changes
+// Keep preview up to date and saves changes
 activeLayersList.addEventListener("input", function(event) {
     const form = event.target.closest("form[data-layer-id]");
     if (!form) return;

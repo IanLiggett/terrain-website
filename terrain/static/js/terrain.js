@@ -26,7 +26,7 @@ const hits = [];
 raycaster.firstHitOnly = true;
 raycaster.layers.set(1);
 raycaster.near = 0;
-raycaster.far = 200;
+raycaster.far = 50;
 
 
 // terrain state and settings
@@ -515,7 +515,7 @@ function calculate_terrain_noise(layers, geometry, noise2d) {
 }
 
 // main function which uses the scene to render the terrain
-export function generate_terrain(layers, seed=13, has_erosion=true, has_water=true, has_rivers=true, river_settings=null) {
+export function generate_terrain(layers, seed=15, has_erosion=true, has_water=true, has_rivers=true, river_settings=null) {
     // initialize seeded random number generator and noise function
     const prng = Alea(seed);
     const noise2d = createNoise2D(prng);
@@ -583,7 +583,7 @@ export function render_preview(canvas, params) {
 }
 
 export function get_height_at_xz(x, z) {
-    const origin = new THREE.Vector3(x, 100, z);
+    const origin = new THREE.Vector3(x, 25, z);
 
     raycaster.set(origin, down);
     hits.length = 0;
