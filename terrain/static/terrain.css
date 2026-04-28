@@ -34,6 +34,11 @@ html, body {
     min-height: 0;
 }
 
+#additionalSettings {
+    padding: 0px;
+    margin: 0;
+}
+
 #riverSettingsFrame {
     border-color: rgb(188, 188, 204);
     border-width: 2px;
@@ -68,3 +73,23 @@ html, body {
 }
 
 
+/* 
+Extra large column settings since xl is slightly too cramped for current layout
+I don't know how to install bootstrap into this environment, which would let me do this in a more standard way
+Therefore, shenanigans:
+*/
+@media (min-width: 1400px) {
+  .row > .col-xxl-3 {
+    flex: 0 0 25%;
+    max-width: 25%;
+  }
+
+  .row > .col-xxl-6 {
+    flex: 0 0 50%;
+    max-width: 50%;
+  }
+
+  .row > .order-xxl-1 { order: 1; }
+  .row > .order-xxl-2 { order: 2; }
+  .row > .order-xxl-3 { order: 3; }
+}

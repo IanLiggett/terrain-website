@@ -3,6 +3,7 @@
     <head>
         {% load static %}
         {% load bootstrap4 %}
+
         <script type="importmap">
             {
                 "imports": {
@@ -13,13 +14,7 @@
             }
         </script>
         <link rel="stylesheet" href="{% static 'terrain.css' %}">
-
-        <!-- <script type="module" src="{% static 'terrain.js' %}"></script> -->
         <script type="module" src="{% static 'js/page.js' %}"></script>
-        <!-- <script type="module" src="{% static 'js/terrain.js' %}"></script>
-        <script type="module" src="{% static 'js/page.js' %}"></script>
-        <script type="module" src="{% static 'js/scene.js' %}"></script>
-        <script type="module" src="{% static 'js/movement.js' %}"></script> -->
 
         {% include "bootstrap.html" %}
     </head>
@@ -31,7 +26,7 @@
                 </div>
             </div>
             <div id="contentRow" class="row">
-                <div id="leftColumn" class="col-lg-3 col-12 d-flex flex-column">
+                <div id="leftColumn" class="col-xxl-3 col-sm-6 col-12 order-2 order-xxl-1 d-flex flex-column">
                     <div id="activeListFrame" class="d-flex flex-column">
                         <div class="p-1 border border-primary bg-light rounded-top d-flex align-items-center">
                             <h3 class="mb-0">Active Layers</h3>
@@ -53,13 +48,10 @@
                         </div>
                     </div>
                 </div>
-                <div id="middleColumn" class="col-lg-6 col-12 d-flex flex-column">
+                <div id="middleColumn" class="col-xxl-6 col-sm-12 col-12 order-1 order-xxl-2 d-flex flex-column">
                     <div id="renderWindowFrame" class="row">
                         <button id="renderButton" class="col-sm-3 btn btn-primary active btn-lg">
                             RENDER
-                        </button>
-                        <button id="exportButton" class="col-sm-2 btn btn-secondary">
-                            EXPORT
                         </button>
                         <div class="flex-grow-1 row">
                             <div class="ml-4 xcol-sm-2">
@@ -89,8 +81,11 @@
                                 </div>
                             </div>
                         </div>
+                        <button id="exportButton" class="col-sm-2 btn btn-secondary">
+                            EXPORT
+                        </button>
                     </div>
-                    <div id="additionalSettings" class="jumbotron min-height-0 flex-grow-1" style="padding: 0px; margin: 0;">
+                    <div id="additionalSettings" class="jumbotron min-height-0 flex-grow-1">
                         <div id="riverSettingsFrame" class="w-50">
                             <h3 class="display-5">River Settings</h3>
                             <form id="riverSettingsForm" class="">
@@ -127,7 +122,7 @@
                         </div>
                     </div>
                 </div>
-                <div id="allListFrame" class="col-lg-3 col-12 d-flex flex-column">
+                <div id="allListFrame" class="col-xxl-3 col-sm-6 col-12 order-3 order-xxl-3 d-flex flex-column">
                     <div class="p-1 border border-primary rounded-top bg-light d-flex">
                         <h3>All Layers</h3>
                     </div>
