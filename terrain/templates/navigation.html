@@ -2,9 +2,9 @@
     <a class="navbar-brand" href="/">Terrain</a>
     <div class="collapse navbar-collapse" id="navbarSupportedContent">
         <ul class="navbar-nav mr-auto">
-            <!-- <li class="nav-item">
+            <li class="nav-item">
                 <a class="nav-link" href="/about/">About</a>
-            </li> -->
+            </li>
             {% if user.is_authenticated %}
             <li>
                 <a class="nav-link" href="/logout/">Logout ({{user.username}})</a>

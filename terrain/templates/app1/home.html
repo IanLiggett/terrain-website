@@ -4,12 +4,17 @@
         {% load static %}
         {% load bootstrap4 %}
 
+        <!-- This probably too many cdn imports but I don't really know how to install them locally -->
         <script type="importmap">
             {
                 "imports": {
                     "three": "https://unpkg.com/three@0.184.0/build/three.module.js",
                     "three/addons/": "https://unpkg.com/three@0.184.0/examples/jsm/",
-                    "three-mesh-bvh": "https://unpkg.com/three-mesh-bvh@0.9.9/src/index.js"
+                    "three-mesh-bvh": "https://unpkg.com/three-mesh-bvh@0.9.9/src/index.js",
+                    "simplex-noise": "https://cdn.jsdelivr.net/npm/simplex-noise@4.0.1/+esm",
+                    "alea": "https://cdn.jsdelivr.net/npm/alea@1.0.1/+esm",
+                    "priority-queue": "https://esm.sh/@datastructures-js/priority-queue@6.3.5",
+                    "denque": "https://esm.sh/denque"
                 }
             }
         </script>
@@ -20,11 +25,7 @@
     </head>
     <body onload="load_user_controls()">
         <div id="mainWindow" class="container-fluid">
-            <div class="row g-0">
-                <div class="col-12">
-                    {% include "navigation.html" %}
-                </div>
-            </div>
+            {% include "navigation.html" %}
             <div id="contentRow" class="row">
                 <div id="leftColumn" class="col-xxl-3 col-sm-6 col-12 order-2 order-xxl-1 d-flex flex-column">
                     <div id="activeListFrame" class="d-flex flex-column">

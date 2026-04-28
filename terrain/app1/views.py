@@ -113,6 +113,9 @@ def home(request):
 
     return render(request, "app1/home.html", {"layer_forms": layer_forms, 'river_settings_form': RiverSettingsForm(instance=request.user.profile.riversettings)})
 
+def about(request):
+    return render(request, "app1/about.html")
+
 def join(request):
     if (request.method == "POST"):
         join_form = JoinForm(request.POST)

@@ -1,18 +1,18 @@
 import * as THREE from 'three';
-import { GLTFExporter } from "three/addons/exporters/GLTFExporter.js";
 import {
   acceleratedRaycast,
   computeBoundsTree,
   disposeBoundsTree,
 } from 'three-mesh-bvh';
-import { createNoise2D } from 'https://cdn.jsdelivr.net/npm/simplex-noise@4.0.1/+esm';
-import Alea from 'https://cdn.jsdelivr.net/npm/alea@1.0.1/+esm';
-import { MinPriorityQueue, MaxPriorityQueue, PriorityQueue } from "https://esm.sh/@datastructures-js/priority-queue@6.3.5";
-import Denque from 'https://esm.sh/denque';
+import {createNoise2D} from 'simplex-noise';
+import Alea from 'alea';
+import { MinPriorityQueue, MaxPriorityQueue, PriorityQueue } from "priority-queue";
+import Denque from 'denque';
 
 import { add_object_to_scene } from './scene.js';
 
-// magic settings that make raycasting cheap
+
+// magic settings that make raycasting cheap enough to do per frame
 THREE.Mesh.prototype.raycast = acceleratedRaycast;
 THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
 THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
