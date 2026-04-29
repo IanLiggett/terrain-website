@@ -1,11 +1,11 @@
 {% load bootstrap4 %}
 <div id="layer-card-{{layer.id}}" class="card">
     <div class="card-header d-flex row">
-        <button class="delete-layer-btn col-sm-1 btn btn-outline-danger" data-layer-id="{{ layer.id }}">D</button>
+        <button class="delete-layer-btn col-sm-1 btn btn-outline-danger p-0" data-layer-id="{{ layer.id }}">D</button>
         <button class="layer-expand-btn btn btn-secondary col-sm-10" type="button" data-toggle="collapse" data-target="#collapse-{{ layer.id }}">
             {{ layer.name }}
         </button>
-        <button class="move-to-inactive-btn col-sm-1 btn btn-outline-secondary" data-layer-id="{{ layer.id }}">R</button>
+        <button class="move-to-inactive-btn col-sm-1 btn btn-outline-secondary p-0" data-layer-id="{{ layer.id }}">R</button>
     </div>
     <div id="collapse-{{ layer.id }}" class="collapse show">
         <div class="card-body">
@@ -21,6 +21,8 @@
                 {% include "formfieldwithtooltip.html" with field=input_layer_form.octaves %}
                 {% include "formfieldwithtooltip.html" with field=input_layer_form.lacunarity %}
                 {% include "formfieldwithtooltip.html" with field=input_layer_form.persistence %}
+                {% include "formfieldwithtooltip.html" with field=input_layer_form.warping %}
+                {% include "formfieldwithtooltip.html" with field=input_layer_form.ridge_strength %}
             </form>
         </div>
     </div>

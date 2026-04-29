@@ -81,6 +81,7 @@ resize_render_window();
 const observer = new ResizeObserver(resize_render_window);
 observer.observe(render_window_frame);
 
+
 render_window_frame.addEventListener("click", () => {
     render_window.focus();
 });

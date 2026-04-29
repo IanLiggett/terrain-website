@@ -10,6 +10,8 @@ class InputLayer(models.Model):
     octaves = models.IntegerField("Octaves:", default=3)
     lacunarity = models.FloatField("Lacunarity:", default=2.0)
     persistence = models.FloatField("Persistence:", default=0.5)
+    warping = models.FloatField("Warping:", default=0.1)
+    ridge_strength = models.FloatField("Ridge Strength:", default=0.3)
 
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)

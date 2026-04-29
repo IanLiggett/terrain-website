@@ -118,24 +118,6 @@ function get_lowest_neighbor_epsilon(x, y, z, position, plane_width, plane_heigh
     };
 }
 
-// calculates noise given layer parameters and a seeded noise generator
-function calculate_noise(noise2d, x, y, frequency, amplitude, octaves, lacunarity, persistence) {
-    let noise = 0;
-    for (let octave = 0; octave < octaves; octave++) {
-        const octFrequency = frequency * lacunarity ** octave;
-        noise += noise2d(x * octFrequency, y * octFrequency) * (amplitude * persistence ** octave);
-    }
-    return noise;
-}
-
-function calculate_extreme_noise(amplitude, octaves, persistence, extreme) {
-    let extremeNoise = 0;
-    for (let octave = 0; octave < octaves; octave++) {
-        extremeNoise += extreme * (amplitude * persistence ** octave);
-    }
-    return extremeNoise;
-}
-
 // iterates over height map and uses the normals as slope to pick colors per vertex
 function calculate_terrain_colors(geometry) {
     const position = geometry.getAttribute("position");
@@ -489,10 +471,41 @@ function add_water_to_terrain(geometry, colors, has_rivers, river_settings) {
     }
 }
 
+function calculate_extreme_noise(amplitude, octaves, persistence, extreme) {
+    let extremeNoise = 0;
+    for (let octave = 0; octave < octaves; octave++) {
+        extremeNoise += extreme * (amplitude * persistence ** octave);
+    }
+    return extremeNoise;
+}
+
+// calculates noise given layer parameters and a seeded noise generator
+function calculate_noise(noise2d, x, y, frequency, amplitude, octaves, lacunarity, persistence) {
+    let noise = 0;
+    for (let octave = 0; octave < octaves; octave++) {
+        const oct_frequency = frequency * lacunarity ** octave;
+        noise += noise2d(x * oct_frequency, y * oct_frequency) * (amplitude * persistence ** octave);
+    }
+    return noise;
+}
+
+function warp(noise2d, x, y, frequency, amplitude, octaves, lacunarity, persistence, warping) {
+    const noise_x = calculate_noise(noise2d, x + 5, y + 5, frequency, amplitude, octaves, lacunarity, persistence);
+    const noise_y = calculate_noise(noise2d, x + 10, y + 10, frequency, amplitude, octaves, lacunarity, persistence);
+
+    return {wx: x + noise_x * warping, wy: y + noise_y * warping}
+}
+
+function calculate_noise_for_layer(layer, x, y, noise2d) {
+    const {wx, wy} = warp(noise2d, x, y, layer.frequency, layer.amplitude, layer.octaves, layer.lacunarity, layer.persistence, layer.warping);
+    const noise = calculate_noise(noise2d, wx, wy, layer.frequency, layer.amplitude, layer.octaves, layer.lacunarity, layer.persistence);
+    return lerp(noise, 1 - Math.abs(noise), layer.ridge_strength);
+}
+
 function calculate_noise_at_coords(layers, x, y, noise2d) {
     let z = 0;
     for (const layer of layers) {
-        z += calculate_noise(noise2d, x, y, layer.frequency, layer.amplitude, layer.octaves, layer.lacunarity, layer.persistence);
+        z += calculate_noise_for_layer(layer, x, y, noise2d);
     }
     return z;
 }
@@ -505,7 +518,6 @@ function calculate_terrain_noise(layers, geometry, noise2d) {
     for (let i = 0; i < position.count; i++) {
         const x = position.getX(i);
         const y = position.getY(i);
-        // const z = calculate_noise(noise2d, x, y, 0.1, 1, 3, 2, 0.5) + calculate_noise(noise2d, x, y, 0.03, 2, 3, 2, 0.5);
         const z = calculate_noise_at_coords(layers, x, y, noise2d);
 
         position.setXYZ(i, x, y, z);
@@ -559,7 +571,7 @@ export function generate_terrain(layers, seed=16, has_erosion=true, has_water=tr
 }
 
 export function render_preview(canvas, params) {
-    const { frequency, amplitude, octaves, lacunarity, persistence } = params;
+    const { frequency, amplitude, octaves, lacunarity, persistence, warping } = params;
     const max = calculate_extreme_noise(amplitude, octaves, persistence, 1);
     const min = calculate_extreme_noise(amplitude, octaves, persistence, -1);
 
@@ -573,7 +585,8 @@ export function render_preview(canvas, params) {
     for (let x = 0; x < previewWidth; x++) {
         for (let y = 0; y < previewHeight; y++) {
             const i = get_i_from_xy(x, y, previewWidth) * 4;
-            const z = calculate_noise(noise2d, x, y, frequency, amplitude, octaves, lacunarity, persistence);
+            // const z = calculate_noise(noise2d, x, y, frequency, amplitude, octaves, lacunarity, persistence, warping);
+            const z = calculate_noise_for_layer(params, x, y, noise2d);
             const v = Math.floor((z - max) / (min - max) * 255);
             data[i] = data[i+1] = data[i+2] = v;
             data[i+3] = 255;

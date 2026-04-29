@@ -6,13 +6,13 @@ from .models import InputLayer, RiverSettings
 class InputLayerForm(forms.ModelForm):
     class Meta:
         model = InputLayer
-        fields = ["name", "frequency", "amplitude", "octaves", "lacunarity", "persistence"]
+        fields = ["name", "frequency", "amplitude", "octaves", "lacunarity", "persistence", "warping", "ridge_strength"]
         widgets = {
             "name": forms.TextInput(attrs={
                 "class": "form-control",
                 "placeholder": "Enter name here",
                 "id": "layerNameInput",
-                "help_text": "A name to help you identify this layer later."
+                "help_text": "A descriptor to help you identify this layer later."
             }),
             "frequency": forms.NumberInput(attrs={
                 "type": "range",
@@ -53,6 +53,22 @@ class InputLayerForm(forms.ModelForm):
                 "step": "0.01",
                 "class": "form-control-range",
                 "help_text": "The amplitude multiplier for each octave.<br>Lower values: lower rises in higher octaves<br>Higher values: higher rises in higher octaves."
+            }),
+            "warping": forms.NumberInput(attrs={
+                "type": "range",
+                "min": "0",
+                "max": "1",
+                "step": "0.01",
+                "class": "form-control-range",
+                "help_text": "The warping multiplier, controls the domain warping of the terrain.<br>Lower values: less warping<br>Higher values: more warping"
+            }),
+            "ridge_strength": forms.NumberInput(attrs={
+                "type": "range",
+                "min": "0",
+                "max": "1",
+                "step": "0.01",
+                "class": "form-control-range",
+                "help_text": "The ridge strength, controls weight of ridges vs regular terrain.<br>Lower values: less ridges<br>Higher values: more ridges"
             }),
         }
 

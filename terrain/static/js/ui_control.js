@@ -200,21 +200,23 @@ function getLayerParams(form) {
     const d = new FormData(form);
     const p = `layer-${form.dataset.layerId}`;
     return {
-        frequency:   parseFloat(d.get(`${p}-frequency`)),
-        amplitude:   parseFloat(d.get(`${p}-amplitude`)),
-        octaves:     parseInt(d.get(`${p}-octaves`)),
-        lacunarity:  parseFloat(d.get(`${p}-lacunarity`)),
-        persistence: parseFloat(d.get(`${p}-persistence`)),
+        frequency:      parseFloat(d.get(`${p}-frequency`)),
+        amplitude:      parseFloat(d.get(`${p}-amplitude`)),
+        octaves:        parseInt(d.get(`${p}-octaves`)),
+        lacunarity:     parseFloat(d.get(`${p}-lacunarity`)),
+        persistence:    parseFloat(d.get(`${p}-persistence`)),
+        warping:        parseFloat(d.get(`${p}-warping`)),
+        ridge_strength:  parseFloat(d.get(`${p}-ridge_strength`))
     };
 }
 
 function getRiverSettings(form) {
     const d = new FormData(form);
     return {
-        max_width: parseInt(d.get("max_width")),
-        river_threshold: parseFloat(d.get("river_threshold")),
-        river_threshold_end: parseFloat(d.get("river_threshold_end")),
-        width_beta: parseFloat(d.get("width_beta")),
+        max_width:              parseInt(d.get("max_width")),
+        river_threshold:        parseFloat(d.get("river_threshold")),
+        river_threshold_end:    parseFloat(d.get("river_threshold_end")),
+        width_beta:             parseFloat(d.get("width_beta")),
     }
 }   
 

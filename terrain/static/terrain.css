@@ -37,14 +37,20 @@ html, body {
 #additionalSettings {
     padding: 0px;
     margin: 0;
+    overflow-y: auto;
+    background-color: transparent;
 }
 
 #riverSettingsFrame {
     border-color: rgb(188, 188, 204);
     border-width: 2px;
     border-style: solid;
-    overflow-y: auto;
-    height: 320px;
+    /* overflow-y: auto; */
+    /* height: 320px; */
+}
+
+.bg-white-MINE {
+    background-color: white;
 }
 
 #renderPreview {
