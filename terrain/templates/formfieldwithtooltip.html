@@ -1,8 +1,17 @@
 <div class="form-group">
-    <label for="{{ field.id_for_label }}">
-        {{ field.label }}
-        {% if field.label != "Name:" %} <span class="slider-value">{{ field.value }}</span> {% endif %}
-    </label>
-    {% include "tooltip.html" with label_owner=field.id_for_label tooltip_text=field.field.widget.attrs.help_text %}
-    {{ field }}
+    {% if field.html_name == "has_erosion" or field.html_name == "has_water" or field.html_name == "has_rivers" %}
+        <div class="form-check">
+            {{ field }}
+            <label class="form-check-label" for="{{ field.id_for_label }}">
+                {{ field.label }}
+            </label>
+        </div>
+    {% else %}
+        <label for="{{ field.id_for_label }}">
+            {{ field.label }}
+            {% if field.label != "Name:" %} <span class="slider-value">{{ field.value }}</span> {% endif %}
+        </label>
+        {% include "tooltip.html" with label_owner=field.id_for_label tooltip_text=field.field.widget.attrs.help_text %}
+        {{ field }}
+    {% endif %}
 </div>
