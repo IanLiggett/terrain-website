@@ -75,7 +75,7 @@ class InputLayerForm(forms.ModelForm):
 class RiverSettingsForm(forms.ModelForm):
     class Meta:
         model = RiverSettings
-        fields = ["max_width", "river_threshold", "river_threshold_end", "width_beta"]
+        fields = ["max_width", "river_threshold", "river_threshold_end", "width_beta", "has_erosion", "has_water", "has_rivers"]
         widgets = {
             "max_width": forms.NumberInput(attrs={
                 "type": "range",
@@ -108,6 +108,18 @@ class RiverSettingsForm(forms.ModelForm):
                 "step": "0.1",
                 "class": "form-control-range",
                 "help_text": "How quickly a river widens, on a quadratic curve.<br>Lower values: widen faster<br>Higher values: widen slower"
+            }),
+            "has_erosion": forms.CheckboxInput(attrs={
+                "class": "form-check-input",
+                "help_text": "Apply erosion to the terrain."
+            }),
+            "has_water": forms.CheckboxInput(attrs={
+                "class": "form-check-input",
+                "help_text": "Fill low-lying areas with water."
+            }),
+            "has_rivers": forms.CheckboxInput(attrs={
+                "class": "form-check-input",
+                "help_text": "Simulate river across the terrain."
             }),
         }
 

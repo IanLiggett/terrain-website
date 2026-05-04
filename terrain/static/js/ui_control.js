@@ -219,8 +219,11 @@ function getRiverSettings(form) {
         river_threshold:        parseFloat(d.get("river_threshold")),
         river_threshold_end:    parseFloat(d.get("river_threshold_end")),
         width_beta:             parseFloat(d.get("width_beta")),
+        has_erosion:            d.get("has_erosion") === "on",
+        has_water:              d.get("has_water") === "on",
+        has_rivers:             d.get("has_rivers") === "on",
     }
-}   
+}
 
 function set_render_button_active() {
     if (render_button_active) return;
@@ -250,10 +253,10 @@ renderButton.addEventListener("click", async function(event) {
         const form = layer_card.querySelector("form[data-layer-id]");
         layers.push(getLayerParams(form));
     }
-    
+
     const river_settings = getRiverSettings(riverSettingsForm);
-    
-    generate_terrain(layers, undefined, undefined, undefined, undefined, river_settings);
+
+    generate_terrain(layers, undefined, river_settings.has_erosion, river_settings.has_water, river_settings.has_rivers, river_settings);
 });
 
 document.getElementById("exportButton").addEventListener("click", async function() {
