@@ -10,9 +10,11 @@ const globcsrfToken = document.querySelector("[name=csrfmiddlewaretoken]").value
 
 const server_save_debounce = 1000;
 
-// enable all tooltips
+// magic spell to enable all tooltips
 $(function () {
-  $('[data-toggle="tooltip"]').tooltip()
+  $('body').tooltip({
+    selector: '[data-toggle="tooltip"]'
+  })
 })
 
 
