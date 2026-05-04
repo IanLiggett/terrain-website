@@ -33,7 +33,7 @@ class InputLayerForm(forms.ModelForm):
             "octaves": forms.NumberInput(attrs={
                 "type": "range",
                 "min": "1",
-                "max": "5",
+                "max": "10",
                 "step": "1",
                 "class": "form-control-range",
                 "help_text": "The number of layers of noise to combine.<br>Lower values: simpler terrain<br>Higher values: more complex and detailed terrain."
@@ -57,7 +57,7 @@ class InputLayerForm(forms.ModelForm):
             "warping": forms.NumberInput(attrs={
                 "type": "range",
                 "min": "0",
-                "max": "1",
+                "max": "3",
                 "step": "0.01",
                 "class": "form-control-range",
                 "help_text": "The warping multiplier, controls the domain warping of the terrain.<br>Lower values: less warping<br>Higher values: more warping"
