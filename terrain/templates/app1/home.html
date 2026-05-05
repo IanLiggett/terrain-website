@@ -18,8 +18,8 @@
                 }
             }
         </script>
-        <link rel="stylesheet" href="{% static 'terrain.css' %}">
-        <script type="module" src="{% static 'js/home_page.js' %}"></script>
+        <link rel="stylesheet" href="{% static 'app1/terrain.css' %}">
+        <script type="module" src="{% static 'app1/js/home_page/main.js' %}"></script>
 
         {% include "bootstrap.html" %}
     </head>
@@ -114,9 +114,6 @@
                     </div>
                 </div>
                 <div id="allListFrame" class="col-xxl-3 col-sm-6 col-12 order-3 order-xxl-3 d-flex flex-column">
-                    <!-- <div class="p-1 border border-primary rounded-top bg-light d-flex">
-                        
-                    </div> -->
                     <div class="bg-light">
                         <h2 class="m-2 p-0">All Layers</h2>
                         <div id="allListScroll" class="overflow-auto">

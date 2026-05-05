@@ -54,12 +54,6 @@ html, body {
     min-height: 25px;
 }
 
-.form-check-label {
-    /* display: block;
-    min-width: 100px;
-    min-height: 50px; */
-}
-
 #renderPreview {
     flex: 0 0 auto;
 }
@@ -102,6 +96,26 @@ html, body {
 }
 
 
+.feature-description-box {
+    background-color: rgb(240, 229, 218);
+    border: 1px solid black;
+    border-radius: 8px;
+    padding: 10px;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    min-height: 70px;
+}
+
+/* prevent overlap of boxes */
+.feature-example-box {
+    /* background-color: rgb(240, 229, 218); */
+    border: 1px solid black;
+    border-radius: 8px;
+    /* padding: 20px; */
+    margin-top: 20px;
+}
+
+
 /* 
 Extra large column settings since xl is slightly too cramped for current layout
 I don't know how to install bootstrap into this environment, which would let me do this in a more standard way
@@ -121,4 +135,25 @@ Therefore, magic shenanigans:
   .row > .order-xxl-1 { order: 1; }
   .row > .order-xxl-2 { order: 2; }
   .row > .order-xxl-3 { order: 3; }
+}
+
+@media (min-width: 1800px) {
+    .row > .col-xxxl-3 {
+        flex: 0 0 25%;
+        max-width: 25%;
+    }
+
+    .row > .col-xxxl-4 {
+        flex: 0 0 33.3333%;
+        max-width: 33.3333%;
+    }
+
+    .row > .col-xxxl-6 {
+        flex: 0 0 50%;
+        max-width: 50%;
+    }
+
+    .row > .order-xxxl-1 { order: 1; }
+    .row > .order-xxxl-2 { order: 2; }
+    .row > .order-xxxl-3 { order: 3; }
 }

@@ -5,8 +5,34 @@ from django.contrib.auth.decorators import login_required
 from django.template.loader import render_to_string
 from app1.forms import JoinForm, LoginForm, InputLayerForm, RiverSettingsForm, FeatureSettingsForm
 from app1.models import Profile, InputLayer, RiverSettings, FeatureSettings
+from app1.presets import LAYER_PRESETS
 
 # Create your views here.
+
+@login_required(login_url="/login/")
+def try_preset(request):
+    if request.method != "POST":
+        return HttpResponse(status=405)
+
+    preset_id = request.POST.get("preset_id")
+    preset = LAYER_PRESETS[preset_id]
+
+    layer = InputLayer.objects.create(
+        user=request.user,
+        name=preset["name"],
+        frequency=preset["frequency"],
+        amplitude=preset["amplitude"],
+        octaves=preset["octaves"],
+        lacunarity=preset["lacunarity"],
+        persistence=preset["persistence"],
+        warping=preset["warping"],
+        ridge_strength=preset["ridge_strength"]
+    )
+
+    request.user.profile.tracked_layers.add(layer)
+
+    print("Tried preset:", preset_id, " redirecting")
+    return redirect("/")
 
 @login_required(login_url="/login/")
 def activate_layer(request):

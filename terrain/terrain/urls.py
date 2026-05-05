@@ -37,4 +37,6 @@ urlpatterns = [
 
     path('saveriversettings/', app1_views.save_river_settings),
     path('savefeaturesettings/', app1_views.save_feature_settings),
+
+    path('try-preset/', app1_views.try_preset, name="try_preset"),
 ]

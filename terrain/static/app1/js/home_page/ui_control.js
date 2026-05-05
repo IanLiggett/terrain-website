@@ -1,12 +1,20 @@
 import { generate_terrain, render_preview } from "./terrain.js";
 import { export_scene_as_glb } from "./scene.js";
 
-const riverSettingsForm = document.getElementById("riverSettingsForm");
-const featureSettingsForm = document.getElementById("featureSettingsForm");
-const seedTextBox = featureSettingsForm.querySelector(".form-control");
-const newInputLayerForm = document.getElementById("newInputLayerForm");
-const activeLayersList = document.getElementById("activeList");
-const allLayersList = document.getElementById("allList");
+const save_layer_url = "savelayer/";
+const save_river_settings_url = "saveriversettings/";
+const save_feature_settings_url = "savefeaturesettings/";
+const activate_layer_url = "activatelayer/";
+const deactivate_layer_url = "deactivatelayer/";
+const delete_layer_url = "deletelayer/";
+const create_layer_url = "createlayer/";
+
+const river_settings_form = document.getElementById("riverSettingsForm");
+const feature_settings_form = document.getElementById("featureSettingsForm");
+const seed_text_box = feature_settings_form.querySelector(".form-control");
+const new_input_layer_form = document.getElementById("newInputLayerForm");
+const active_layers_list = document.getElementById("activeList");
+const all_layers_list = document.getElementById("allList");
 const globcsrfToken = document.querySelector("[name=csrfmiddlewaretoken]").value;
 
 
@@ -27,7 +35,7 @@ newInputLayerForm.addEventListener("submit", async function(event) {
 
     const csrfToken = newInputLayerForm.querySelector("[name=csrfmiddlewaretoken]").value;
 
-    const response = await fetch("createlayer/", {
+    const response = await fetch(create_layer_url, {
       method: "POST",
       headers: {
         "X-CSRFToken": csrfToken,
@@ -42,9 +50,9 @@ newInputLayerForm.addEventListener("submit", async function(event) {
 
     const data = await response.json();
 
-    activeLayersList.insertAdjacentHTML("afterbegin", data.layer_card);
-    allLayersList.insertAdjacentHTML("afterbegin", data.layer_stick);
-    initLayerCard(data.layer_id);
+    active_layers_list.insertAdjacentHTML("afterbegin", data.layer_card);
+    all_layers_list.insertAdjacentHTML("afterbegin", data.layer_stick);
+    init_layer_card(data.layer_id);
 });
 
 // helper function to update the state of a layer
@@ -73,14 +81,14 @@ async function request_layer_update(layer_id, url) {
 async function set_layer_active(button) {
     const layer_id = button.dataset.layerId;
 
-    const {response, success} = await request_layer_update(layer_id, "activatelayer/");
+    const {response, success} = await request_layer_update(layer_id, activate_layer_url);
     if (!success) return;
 
     const data = await response.json();
 
-    activeLayersList.insertAdjacentHTML("afterbegin", data.layer_card);
-    initLayerCard(data.layer_id);
-    const layer_stick_element = allLayersList.querySelector("#layer-stick-" + String(layer_id));
+    active_layers_list.insertAdjacentHTML("afterbegin", data.layer_card);
+    init_layer_card(data.layer_id);
+    const layer_stick_element = all_layers_list.querySelector("#layer-stick-" + String(layer_id));
     if (layer_stick_element) {
         layer_stick_element.outerHTML = data.layer_stick;
     }
@@ -91,12 +99,12 @@ async function set_layer_active(button) {
 async function set_layer_inactive(button) {
     const layer_id = button.dataset.layerId;
 
-    const {response, success} = await request_layer_update(layer_id, "deactivatelayer/");
+    const {response, success} = await request_layer_update(layer_id, deactivate_layer_url);
     if (!success) return;
 
     const layer_stick = await response.text();
-    activeLayersList.querySelector("#layer-card-" + String(layer_id))?.remove();
-    const layer_stick_element = allLayersList.querySelector("#layer-stick-" + String(layer_id));
+    active_layers_list.querySelector("#layer-card-" + String(layer_id))?.remove();
+    const layer_stick_element = all_layers_list.querySelector("#layer-stick-" + String(layer_id));
     if (layer_stick_element) {
         layer_stick_element.outerHTML = layer_stick;
     }
@@ -108,7 +116,7 @@ function is_active(button) {
     return button.dataset.active === "1"
 }
 
-allLayersList.addEventListener("click", async function(event) {
+all_layers_list.addEventListener("click", async function(event) {
     const button = event.target.closest(".toggle-layer-btn");
     if (!button) return;
 
@@ -122,16 +130,16 @@ allLayersList.addEventListener("click", async function(event) {
 async function delete_layer(button) {
     const layer_id = button.dataset.layerId;
 
-    const {response, success} = await request_layer_update(layer_id, "deletelayer/");
+    const {response, success} = await request_layer_update(layer_id, delete_layer_url);
     if (!success) return;
 
-    activeLayersList.querySelector("#layer-card-" + String(layer_id))?.remove();
-    allLayersList.querySelector("#layer-stick-" + String(layer_id))?.remove();
+    active_layers_list.querySelector("#layer-card-" + String(layer_id))?.remove();
+    all_layers_list.querySelector("#layer-stick-" + String(layer_id))?.remove();
 
     set_render_button_active();
 }
 
-activeLayersList.addEventListener("click", async function(event) {
+active_layers_list.addEventListener("click", async function(event) {
     const setInactiveButton = event.target.closest(".move-to-inactive-btn");
     if (setInactiveButton) {
         set_layer_inactive(setInactiveButton);
@@ -145,14 +153,14 @@ activeLayersList.addEventListener("click", async function(event) {
     }
 })
 
-function initLayerCard(layerId) {
+function init_layer_card(layerId) {
     const layer_card = document.querySelector(`#layer-card-${layerId}`);
     const form = layer_card.querySelector(`form[data-layer-id="${layerId}"]`);
     const canvas = document.getElementById(`preview-${layerId}`);
     if (!form || !canvas) return;
     render_preview(canvas, get_layer_settings(form));
 
-    const layer_stick_element = allLayersList.querySelector("#layer-stick-" + String(layerId));
+    const layer_stick_element = all_layers_list.querySelector("#layer-stick-" + String(layerId));
     const name_box = form.querySelector(`input[name="layer-${layerId}-name"]`);
     const card_name_display = layer_card.querySelector(".layer-expand-btn");
     const stick_name_display = layer_stick_element.querySelector(".layer-stick-name");
@@ -171,24 +179,24 @@ function initLayerCard(layerId) {
     });
 }
 
-async function saveLayer(form, url) {
-    const layerId = form.dataset.layerId;
-    const formData = new FormData(form);
-    formData.append("layer_id", layerId);
+async function save_layer(form, url) {
+    const layer_id = form.dataset.layerId;
+    const form_data = new FormData(form);
+    form_data.append("layer_id", layer_id);
     const res = await fetch(url, {
         method: "POST",
-        body: formData,
+        body: form_data,
         headers: { "X-CSRFToken": globcsrfToken },
         credentials: "same-origin",
     });
     if (!res.ok) console.error("Save failed:", res.status);
 }
 
-async function saveStandardForm(form, url) {
-    const formData = new FormData(form);
+async function save_standard_form(form, url) {
+    const form_data = new FormData(form);
     const res = await fetch(url, {
         method: "POST",
-        body: formData,
+        body: form_data,
         headers: { "X-CSRFToken": globcsrfToken },
         credentials: "same-origin",
     });
@@ -197,7 +205,7 @@ async function saveStandardForm(form, url) {
 
 
 // ----- render control logic
-const renderButton = document.getElementById("renderButton");
+const render_button = document.getElementById("renderButton");
 let render_button_active = true;
 
 function get_layer_settings(form) {
@@ -246,33 +254,33 @@ function set_render_button_active() {
     if (render_button_active) return;
     render_button_active = true;
 
-    renderButton.removeAttribute("disabled");
-    renderButton.classList.remove("btn-secondary");
-    renderButton.classList.add("active");
-    renderButton.classList.add("btn-primary");
+    render_button.removeAttribute("disabled");
+    render_button.classList.remove("btn-secondary");
+    render_button.classList.add("active");
+    render_button.classList.add("btn-primary");
 }
 
 function set_render_button_inactive() {
     if (!render_button_active) return;
     render_button_active = false;
 
-    renderButton.setAttribute("disabled", true);
-    renderButton.classList.remove("btn-primary");
-    renderButton.classList.remove("active");
-    renderButton.classList.add("btn-secondary");
+    render_button.setAttribute("disabled", true);
+    render_button.classList.remove("btn-primary");
+    render_button.classList.remove("active");
+    render_button.classList.add("btn-secondary");
 }
 
-renderButton.addEventListener("click", async function(event) {
+render_button.addEventListener("click", async function(event) {
     set_render_button_inactive();
 
     const layers = [];
-    for (const layer_card of activeLayersList.children) {
+    for (const layer_card of active_layers_list.children) {
         const form = layer_card.querySelector("form[data-layer-id]");
         layers.push(get_layer_settings(form));
     }
 
-    const river_settings = get_river_settings(riverSettingsForm);
-    const feature_settings = get_feature_settings(featureSettingsForm);
+    const river_settings = get_river_settings(river_settings_form);
+    const feature_settings = get_feature_settings(feature_settings_form);
 
     generate_terrain(layers, feature_settings, river_settings);
 });
@@ -283,59 +291,59 @@ document.getElementById("exportButton").addEventListener("click", async function
 
 
 // Throttle via rAF — skip frames if one is already queued
-let rafPending = false;
-function throttledPreview(form, canvas) {
-    if (rafPending) return;
-    rafPending = true;
+let raf_pending = false;
+function throttled_preview(form, canvas) {
+    if (raf_pending) return;
+    raf_pending = true;
     requestAnimationFrame(() => {
         render_preview(canvas, get_layer_settings(form));
-        rafPending = false;
+        raf_pending = false;
     });
 }
 
 // Debounce — wait server_save_debounce ms after last change before saving
-let saveTimer = null;
-function debouncedSave(form, saveFunction, url) {
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => saveFunction(form, url), server_save_debounce);
+let save_timer = null;
+function debounced_save(form, saveFunction, url) {
+    clearTimeout(save_timer);
+    save_timer = setTimeout(() => saveFunction(form, url), server_save_debounce);
 }
 
 // Keep preview up to date and saves changes
-activeLayersList.addEventListener("input", function(event) {
+active_layers_list.addEventListener("input", function(event) {
     const form = event.target.closest("form[data-layer-id]");
     if (!form) return;
     set_render_button_active();
     const canvas = document.getElementById(`preview-${form.dataset.layerId}`);
-    if (canvas) throttledPreview(form, canvas);
-    debouncedSave(form, saveLayer, "savelayer/");
+    if (canvas) throttled_preview(form, canvas);
+    debounced_save(form, save_layer, "savelayer/");
 });
 
 document.querySelectorAll("#activeList form[data-layer-id]").forEach(form => {
-    initLayerCard(form.dataset.layerId);
+    init_layer_card(form.dataset.layerId);
 });
 
 
-riverSettingsForm.addEventListener("input", function() {
+river_settings_form.addEventListener("input", function() {
     set_render_button_active();
-    debouncedSave(this, saveStandardForm, "saveriversettings/");
+    debounced_save(this, save_standard_form, save_river_settings_url);
 });
 
 
-featureSettingsForm.addEventListener("input", function() {
+feature_settings_form.addEventListener("input", function() {
     set_render_button_active();
-    debouncedSave(this, saveStandardForm, "savefeaturesettings/");
+    debounced_save(this, save_standard_form, save_feature_settings_url);
 })
 
 // prevent the enter key from causing a page reload for the seed input
-featureSettingsForm.addEventListener("keydown", function(event) {
+feature_settings_form.addEventListener("keydown", function(event) {
     if (event.key === "Enter") {
         event.preventDefault();
-        seedTextBox.blur();
+        seed_text_box.blur();
     }
 });
 // detect blur upstream and update server with new seed
-featureSettingsForm.addEventListener("blur", function(event) {
-    debouncedSave(this, saveStandardForm, "savefeaturesettings/");
+feature_settings_form.addEventListener("blur", function(event) {
+    debounced_save(this, save_standard_form, save_feature_settings_url);
 });
 
 

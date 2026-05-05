@@ -2,16 +2,30 @@
 <html>
     <head>
         {% load static %}
+        {% load bootstrap4 %}
 
         <meta charset="utf-8">
-        <title>About - Terrain</title>
 
-        <link rel="stylesheet" href="{%static 'terrain.css' %}" />
+        <link rel="stylesheet" href="{%static 'app1/terrain.css' %}" />
+        <script type="module" src="{% static 'app1/js/about_page.js' %}"></script>
         {% include "bootstrap.html" %}
     </head>
     <body>
         {% include "navigation.html" %}
+        <div id="featureExamplesContainer" class="row m-2">
+            {% csrf_token %}
 
+            <div class="col-md-12">
+                <h1>Terrain</h1>
+                <p>This project is a terrain generation tool that uses simplex noise to create height maps. You can customize various parameters for noise generation, visualize the generated terrain, and export it as a glb.</p>
+            </div>
 
+            {% include "feature_example_box.html" with feature_id="basic" feature_name="Base Noise" feature_description="The base noise layer is the foundation of the terrain, providing basic height variations." feature_image="base_noise.png" %}
+            {% include "feature_example_box.html" with feature_id="fractal" feature_name="Fractal Noise" feature_description="Fractal noise adds additional layers of noise to create more complex and detailed terrain features." feature_image="fractal_noise.png" %}
+            {% include "feature_example_box.html" with feature_id="warping" feature_name="Warping" feature_description="You can apply warping to the generated terrain to further break up patterns." feature_image="warping.png" %}
+            {% include "feature_example_box.html" with feature_id="ridges" feature_name="Ridges" feature_description="Ridges can be applied to the generated terrain to create dune-like features." feature_image="ridges.png" %}
+            {% include "feature_example_box.html" with feature_id="water" feature_name="Water" feature_description="You can add water to create bodies of water and rivers in your terrain." feature_image="water.png" %}
+            {% include "feature_example_box.html" with feature_id="combined" feature_name="Combined" feature_description="By combining all the features, you can create more complex terrain." feature_image="all_in_one.png" %}
+        </div>
     </body>
 </html>

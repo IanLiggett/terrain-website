@@ -1,0 +1,21 @@
+{% load static %}
+<div class="col-md-6 col-xxxl-4">
+    <div class="feature-example-box row m-1">
+        <div class="col-md-12">
+            <div class="row">
+                <h2 class="flex-grow-1 ml-3">{{ feature_name }}</h2>
+                <form class="flex-grow-0 ml-auto mr-3 mt-2" method="post" action="{% url 'try_preset' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="preset_id" value="{{ feature_id }}">
+                    <button type="submit" class="try-feature-button btn btn-primary">Try {{ feature_name }}</button>
+                </form>
+            </div>
+            <p class="feature-description-box">{{ feature_description }}</p>
+        </div>
+        <div class="col-md-12">
+            {% static 'app1/images/' as image_base %}
+            <img src="{{ image_base }}{{ feature_image }}" alt="{{ feature_name }} Example" class="img-fluid" />
+            <!-- <img src="{% static 'app1/images/{{ feature_image }}' %}" alt="{{ feature_name }} Example" class="img-fluid" /> -->
+        </div>
+    </div>
+</div>
