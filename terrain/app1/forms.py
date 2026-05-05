@@ -1,7 +1,7 @@
 from django import forms
 from django.core import validators
 from django.contrib.auth.models import User
-from .models import InputLayer, RiverSettings
+from .models import InputLayer, RiverSettings, FeatureSettings
 
 class InputLayerForm(forms.ModelForm):
     class Meta:
@@ -75,7 +75,7 @@ class InputLayerForm(forms.ModelForm):
 class RiverSettingsForm(forms.ModelForm):
     class Meta:
         model = RiverSettings
-        fields = ["max_width", "river_threshold", "river_threshold_end", "width_beta", "has_erosion", "has_water", "has_rivers"]
+        fields = ["max_width", "river_threshold", "river_threshold_end", "width_beta"]
         widgets = {
             "max_width": forms.NumberInput(attrs={
                 "type": "range",
@@ -109,17 +109,30 @@ class RiverSettingsForm(forms.ModelForm):
                 "class": "form-control-range",
                 "help_text": "How quickly a river widens, on a quadratic curve.<br>Lower values: widen faster<br>Higher values: widen slower"
             }),
+        }
+
+class FeatureSettingsForm(forms.ModelForm):
+    class Meta:
+        model = FeatureSettings
+        fields = ["seed", "has_erosion", "has_water", "has_rivers"]
+        widgets = {
+            "seed": forms.TextInput(attrs={
+                "class": "form-control",
+                "placeholder": "Enter seed here",
+                "id": "seedInput",
+                "help_text": "A seed to get a different look from the terrain."
+            }),
             "has_erosion": forms.CheckboxInput(attrs={
-                "class": "form-check-input",
+                "class": "form-check-input big-checkmark",
                 "help_text": "Apply erosion to the terrain."
             }),
             "has_water": forms.CheckboxInput(attrs={
-                "class": "form-check-input",
-                "help_text": "Fill low-lying areas with water."
+                "class": "form-check-input big-checkmark",
+                "help_text": "Fill depressions with water."
             }),
             "has_rivers": forms.CheckboxInput(attrs={
-                "class": "form-check-input",
-                "help_text": "Simulate river across the terrain."
+                "class": "form-check-input big-checkmark",
+                "help_text": "Simulate rivers across the terrain."
             }),
         }
 

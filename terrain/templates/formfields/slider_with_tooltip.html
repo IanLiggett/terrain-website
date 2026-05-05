@@ -1,0 +1,8 @@
+<div class="form-group">
+    <label for="{{ field.id_for_label }}">
+        {{ field.label }}
+        <span class="slider-value">{{ field.value }}</span>
+    </label>
+    {% include "tooltip.html" with label_owner=field.id_for_label tooltip_text=field.field.widget.attrs.help_text %}
+    {{ field }}
+</div>

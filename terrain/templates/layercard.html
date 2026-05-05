@@ -15,14 +15,14 @@
             </canvas>
             <form method="post" data-layer-id="{{layer.id}}">
                 {% csrf_token %}
-                {% include "formfieldwithtooltip.html" with field=input_layer_form.name %}
-                {% include "formfieldwithtooltip.html" with field=input_layer_form.frequency %}
-                {% include "formfieldwithtooltip.html" with field=input_layer_form.amplitude %}
-                {% include "formfieldwithtooltip.html" with field=input_layer_form.octaves %}
-                {% include "formfieldwithtooltip.html" with field=input_layer_form.lacunarity %}
-                {% include "formfieldwithtooltip.html" with field=input_layer_form.persistence %}
-                {% include "formfieldwithtooltip.html" with field=input_layer_form.warping %}
-                {% include "formfieldwithtooltip.html" with field=input_layer_form.ridge_strength %}
+                {% include "formfields/textbox_with_tooltip.html" with field=input_layer_form.name %}
+                {% include "formfields/slider_with_tooltip.html" with field=input_layer_form.frequency %}
+                {% include "formfields/slider_with_tooltip.html" with field=input_layer_form.amplitude %}
+                {% include "formfields/slider_with_tooltip.html" with field=input_layer_form.octaves %}
+                {% include "formfields/slider_with_tooltip.html" with field=input_layer_form.lacunarity %}
+                {% include "formfields/slider_with_tooltip.html" with field=input_layer_form.persistence %}
+                {% include "formfields/slider_with_tooltip.html" with field=input_layer_form.warping %}
+                {% include "formfields/slider_with_tooltip.html" with field=input_layer_form.ridge_strength %}
             </form>
         </div>
     </div>

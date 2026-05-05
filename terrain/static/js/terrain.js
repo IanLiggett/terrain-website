@@ -527,8 +527,13 @@ function calculate_terrain_noise(layers, geometry, noise2d) {
 }
 
 // main function which uses the scene to render the terrain
-export function generate_terrain(layers, seed=16, has_erosion=true, has_water=true, has_rivers=true, river_settings=null) {
+export function generate_terrain(layers, feature_settings, river_settings) {
     // initialize seeded random number generator and noise function
+    const seed = feature_settings.seed;
+    const has_erosion = feature_settings.has_erosion;
+    const has_water = feature_settings.has_water;
+    const has_rivers = feature_settings.has_rivers;
+
     const prng = Alea(seed);
     const noise2d = createNoise2D(prng);
 

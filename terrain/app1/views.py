@@ -3,8 +3,8 @@ from django.contrib.auth import authenticate, login, logout
 from django.http import JsonResponse, HttpResponse
 from django.contrib.auth.decorators import login_required
 from django.template.loader import render_to_string
-from app1.forms import JoinForm, LoginForm, InputLayerForm, RiverSettingsForm
-from app1.models import Profile, InputLayer, RiverSettings
+from app1.forms import JoinForm, LoginForm, InputLayerForm, RiverSettingsForm, FeatureSettingsForm
+from app1.models import Profile, InputLayer, RiverSettings, FeatureSettings
 
 # Create your views here.
 
@@ -20,6 +20,7 @@ def activate_layer(request):
     
     request.user.profile.tracked_layers.add(layer)
 
+    # modify layer_stick to look different now that it's an active layer
     layer_card = render_to_string(
         "layercard.html",
         {"layer": layer, "input_layer_form": InputLayerForm(instance=layer, prefix=f"layer-{layer.id}")},
@@ -30,8 +31,6 @@ def activate_layer(request):
         {"layer": layer, "is_active": True},
         request=request
     )
-
-    # modify layer_stick to look different now that it's an active layer
 
     return JsonResponse({
         "ok": True,
@@ -111,7 +110,15 @@ def home(request):
 
         layer_forms.append(layer_data)
 
-    return render(request, "app1/home.html", {"layer_forms": layer_forms, 'river_settings_form': RiverSettingsForm(instance=request.user.profile.riversettings)})
+    return render(
+        request,
+        "app1/home.html", 
+        {
+            "layer_forms": layer_forms,
+            "river_settings_form": RiverSettingsForm(instance=request.user.profile.riversettings),
+            "feature_settings_form": FeatureSettingsForm(instance=request.user.profile.featuresettings),
+        }
+    )
 
 def about(request):
     return render(request, "app1/about.html")
@@ -129,7 +136,8 @@ def join(request):
 
             # Create user profile
             Profile.objects.create(user=user)
-            RiverSettings.objects.create(profile=user.profile);
+            RiverSettings.objects.create(profile=user.profile)
+            FeatureSettings.objects.create(profile=user.profile)
 
             # Success! Redirect to home page.
             return redirect("/")
@@ -197,6 +205,18 @@ def save_river_settings(request):
 
     river_settings = get_object_or_404(RiverSettings, profile=request.user.profile)
     form = RiverSettingsForm(request.POST, instance=river_settings)
+    if form.is_valid():
+        form.save()
+        return JsonResponse({"ok": True})
+    return JsonResponse({"ok": False, "errors": form.errors}, status=400)
+
+@login_required(login_url='/login/')
+def save_feature_settings(request):
+    if request.method != "POST":
+        return HttpResponse(status=405)
+
+    feature_settings = get_object_or_404(FeatureSettings, profile=request.user.profile)
+    form = FeatureSettingsForm(request.POST, instance=feature_settings)
     if form.is_valid():
         form.save()
         return JsonResponse({"ok": True})

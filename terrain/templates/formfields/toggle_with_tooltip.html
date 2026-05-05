@@ -1,0 +1,9 @@
+<div class="form-group">
+    <div class="form-check">
+        {{ field }}
+        <label class="form-check-label ml-2 lead" for="{{ field.id_for_label }}">
+            {{ field.label }}
+        </label>
+        {% include "tooltip.html" with label_owner=field.id_for_label tooltip_text=field.field.widget.attrs.help_text %}
+    </div>
+</div>

@@ -2,6 +2,8 @@ import { generate_terrain, render_preview } from "./terrain.js";
 import { export_scene_as_glb } from "./scene.js";
 
 const riverSettingsForm = document.getElementById("riverSettingsForm");
+const featureSettingsForm = document.getElementById("featureSettingsForm");
+const seedTextBox = featureSettingsForm.querySelector(".form-control");
 const newInputLayerForm = document.getElementById("newInputLayerForm");
 const activeLayersList = document.getElementById("activeList");
 const allLayersList = document.getElementById("allList");
@@ -148,7 +150,7 @@ function initLayerCard(layerId) {
     const form = layer_card.querySelector(`form[data-layer-id="${layerId}"]`);
     const canvas = document.getElementById(`preview-${layerId}`);
     if (!form || !canvas) return;
-    render_preview(canvas, getLayerParams(form));
+    render_preview(canvas, get_layer_settings(form));
 
     const layer_stick_element = allLayersList.querySelector("#layer-stick-" + String(layerId));
     const name_box = form.querySelector(`input[name="layer-${layerId}-name"]`);
@@ -169,11 +171,11 @@ function initLayerCard(layerId) {
     });
 }
 
-async function saveLayer(form) {
+async function saveLayer(form, url) {
     const layerId = form.dataset.layerId;
     const formData = new FormData(form);
     formData.append("layer_id", layerId);
-    const res = await fetch("/savelayer/", {
+    const res = await fetch(url, {
         method: "POST",
         body: formData,
         headers: { "X-CSRFToken": globcsrfToken },
@@ -182,9 +184,9 @@ async function saveLayer(form) {
     if (!res.ok) console.error("Save failed:", res.status);
 }
 
-async function saveRiverSettings(form) {
+async function saveStandardForm(form, url) {
     const formData = new FormData(form);
-    const res = await fetch("/saveriversettings/", {
+    const res = await fetch(url, {
         method: "POST",
         body: formData,
         headers: { "X-CSRFToken": globcsrfToken },
@@ -198,31 +200,46 @@ async function saveRiverSettings(form) {
 const renderButton = document.getElementById("renderButton");
 let render_button_active = true;
 
-function getLayerParams(form) {
+function get_layer_settings(form) {
     const d = new FormData(form);
     const p = `layer-${form.dataset.layerId}`;
     return {
-        frequency:      parseFloat(d.get(`${p}-frequency`)),
-        amplitude:      parseFloat(d.get(`${p}-amplitude`)),
-        octaves:        parseInt(d.get(`${p}-octaves`)),
-        lacunarity:     parseFloat(d.get(`${p}-lacunarity`)),
-        persistence:    parseFloat(d.get(`${p}-persistence`)),
-        warping:        parseFloat(d.get(`${p}-warping`)),
-        ridge_strength:  parseFloat(d.get(`${p}-ridge_strength`))
+        frequency:          parseFloat(d.get(`${p}-frequency`)),
+        amplitude:          parseFloat(d.get(`${p}-amplitude`)),
+        octaves:            parseInt(d.get(`${p}-octaves`)),
+        lacunarity:         parseFloat(d.get(`${p}-lacunarity`)),
+        persistence:        parseFloat(d.get(`${p}-persistence`)),
+        warping:            parseFloat(d.get(`${p}-warping`)),
+        ridge_strength:     parseFloat(d.get(`${p}-ridge_strength`)),
     };
 }
 
-function getRiverSettings(form) {
+function get_river_settings(form) {
     const d = new FormData(form);
     return {
         max_width:              parseInt(d.get("max_width")),
         river_threshold:        parseFloat(d.get("river_threshold")),
         river_threshold_end:    parseFloat(d.get("river_threshold_end")),
         width_beta:             parseFloat(d.get("width_beta")),
-        has_erosion:            d.get("has_erosion") === "on",
-        has_water:              d.get("has_water") === "on",
-        has_rivers:             d.get("has_rivers") === "on",
     }
+}
+
+function get_seed_from_raw_seed(raw_seed) {
+    let seed = 0;
+    for (let i = 0; i < raw_seed.length; i++) {
+        seed += raw_seed.charCodeAt(i) * (i + 1);
+    }
+    return seed;
+}
+
+function get_feature_settings(form) {
+    const d = new FormData(form);
+    return {
+        seed:           get_seed_from_raw_seed(d.get("seed")),
+        has_erosion:    d.get("has_erosion") === "on",
+        has_water:      d.get("has_water") === "on",
+        has_rivers:     d.get("has_rivers") === "on",
+    };
 }
 
 function set_render_button_active() {
@@ -251,12 +268,13 @@ renderButton.addEventListener("click", async function(event) {
     const layers = [];
     for (const layer_card of activeLayersList.children) {
         const form = layer_card.querySelector("form[data-layer-id]");
-        layers.push(getLayerParams(form));
+        layers.push(get_layer_settings(form));
     }
 
-    const river_settings = getRiverSettings(riverSettingsForm);
+    const river_settings = get_river_settings(riverSettingsForm);
+    const feature_settings = get_feature_settings(featureSettingsForm);
 
-    generate_terrain(layers, undefined, river_settings.has_erosion, river_settings.has_water, river_settings.has_rivers, river_settings);
+    generate_terrain(layers, feature_settings, river_settings);
 });
 
 document.getElementById("exportButton").addEventListener("click", async function() {
@@ -270,16 +288,16 @@ function throttledPreview(form, canvas) {
     if (rafPending) return;
     rafPending = true;
     requestAnimationFrame(() => {
-        render_preview(canvas, getLayerParams(form));
+        render_preview(canvas, get_layer_settings(form));
         rafPending = false;
     });
 }
 
 // Debounce — wait server_save_debounce ms after last change before saving
 let saveTimer = null;
-function debouncedSave(form, saveFunction) {
+function debouncedSave(form, saveFunction, url) {
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => saveFunction(form), server_save_debounce);
+    saveTimer = setTimeout(() => saveFunction(form, url), server_save_debounce);
 }
 
 // Keep preview up to date and saves changes
@@ -289,7 +307,7 @@ activeLayersList.addEventListener("input", function(event) {
     set_render_button_active();
     const canvas = document.getElementById(`preview-${form.dataset.layerId}`);
     if (canvas) throttledPreview(form, canvas);
-    debouncedSave(form, saveLayer);
+    debouncedSave(form, saveLayer, "savelayer/");
 });
 
 document.querySelectorAll("#activeList form[data-layer-id]").forEach(form => {
@@ -299,7 +317,25 @@ document.querySelectorAll("#activeList form[data-layer-id]").forEach(form => {
 
 riverSettingsForm.addEventListener("input", function() {
     set_render_button_active();
-    debouncedSave(this, saveRiverSettings);
+    debouncedSave(this, saveStandardForm, "saveriversettings/");
+});
+
+
+featureSettingsForm.addEventListener("input", function() {
+    set_render_button_active();
+    debouncedSave(this, saveStandardForm, "savefeaturesettings/");
+})
+
+// prevent the enter key from causing a page reload for the seed input
+featureSettingsForm.addEventListener("keydown", function(event) {
+    if (event.key === "Enter") {
+        event.preventDefault();
+        seedTextBox.blur();
+    }
+});
+// detect blur upstream and update server with new seed
+featureSettingsForm.addEventListener("blur", function(event) {
+    debouncedSave(this, saveStandardForm, "savefeaturesettings/");
 });
 
 

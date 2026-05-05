@@ -36,4 +36,5 @@ urlpatterns = [
     path('deactivatelayer/', app1_views.deactivate_layer),
 
     path('saveriversettings/', app1_views.save_river_settings),
+    path('savefeaturesettings/', app1_views.save_feature_settings),
 ]

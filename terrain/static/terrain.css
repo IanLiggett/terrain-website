@@ -41,7 +41,7 @@ html, body {
     background-color: transparent;
 }
 
-#riverSettingsFrame {
+#riverSettingsFrame, #featureSettingsFrame {
     border-color: rgb(188, 188, 204);
     border-width: 2px;
     border-style: solid;
@@ -49,8 +49,15 @@ html, body {
     /* height: 320px; */
 }
 
-.bg-white-MINE {
-    background-color: white;
+.big-checkmark {
+    min-width: 25px;
+    min-height: 25px;
+}
+
+.form-check-label {
+    /* display: block;
+    min-width: 100px;
+    min-height: 50px; */
 }
 
 #renderPreview {
@@ -98,7 +105,7 @@ html, body {
 /* 
 Extra large column settings since xl is slightly too cramped for current layout
 I don't know how to install bootstrap into this environment, which would let me do this in a more standard way
-Therefore, shenanigans:
+Therefore, magic shenanigans:
 */
 @media (min-width: 1400px) {
   .row > .col-xxl-3 {

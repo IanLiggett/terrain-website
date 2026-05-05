@@ -23,6 +23,10 @@ class RiverSettings(models.Model):
     river_threshold = models.FloatField("River Threshold:", default=0.02)
     river_threshold_end = models.FloatField("River Threshold End:", default=0.6)
     width_beta = models.FloatField("Width Beta:", default=0.5)
-    has_erosion = models.BooleanField("Erosion:", default=True)
-    has_water = models.BooleanField("Water:", default=True)
-    has_rivers = models.BooleanField("Rivers:", default=True)
+
+class FeatureSettings(models.Model):
+    profile = models.OneToOneField(Profile, on_delete=models.CASCADE)
+    seed = models.CharField("Seed:", max_length=255, blank=True, default="Terrain!")
+    has_erosion = models.BooleanField("Erosion", default=True)
+    has_water = models.BooleanField("Water", default=True)
+    has_rivers = models.BooleanField("Rivers", default=True)
