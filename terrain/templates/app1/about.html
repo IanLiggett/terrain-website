@@ -13,13 +13,10 @@
     <body>
         {% include "navigation.html" %}
         <div id="featureExamplesContainer" class="row m-2">
-            {% csrf_token %}
-
             <div class="col-md-12">
                 <h1>Terrain</h1>
                 <p>This project is a terrain generation tool that uses simplex noise to create height maps. You can customize various parameters for noise generation, visualize the generated terrain, and export it as a glb.</p>
             </div>
-
             {% include "feature_example_box.html" with feature_id="basic" feature_name="Base Noise" feature_description="The base noise layer is the foundation of the terrain, providing basic height variations." feature_image="base_noise.png" %}
             {% include "feature_example_box.html" with feature_id="fractal" feature_name="Fractal Noise" feature_description="Fractal noise adds additional layers of noise to create more complex and detailed terrain features." feature_image="fractal_noise.png" %}
             {% include "feature_example_box.html" with feature_id="warping" feature_name="Warping" feature_description="You can apply warping to the generated terrain to further break up patterns." feature_image="warping.png" %}

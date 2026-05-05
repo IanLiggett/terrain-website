@@ -30,10 +30,10 @@ $(function () {
 
 // ----- input layer state handling
 
-newInputLayerForm.addEventListener("submit", async function(event) {
+new_input_layer_form.addEventListener("submit", async function(event) {
     event.preventDefault();
 
-    const csrfToken = newInputLayerForm.querySelector("[name=csrfmiddlewaretoken]").value;
+    const csrfToken = new_input_layer_form.querySelector("[name=csrfmiddlewaretoken]").value;
 
     const response = await fetch(create_layer_url, {
       method: "POST",
@@ -270,7 +270,7 @@ function set_render_button_inactive() {
     render_button.classList.add("btn-secondary");
 }
 
-render_button.addEventListener("click", async function(event) {
+function call_render() {
     set_render_button_inactive();
 
     const layers = [];
@@ -283,7 +283,9 @@ render_button.addEventListener("click", async function(event) {
     const feature_settings = get_feature_settings(feature_settings_form);
 
     generate_terrain(layers, feature_settings, river_settings);
-});
+}
+call_render();
+render_button.addEventListener("click", call_render);
 
 document.getElementById("exportButton").addEventListener("click", async function() {
     export_scene_as_glb();
