@@ -7,7 +7,7 @@
                 <form class="flex-grow-0 ml-auto mr-3 mt-2" method="post" action="{% url 'try_preset' %}">
                     {% csrf_token %}
                     <input type="hidden" name="preset_id" value="{{ feature_id }}">
-                    <button type="submit" class="try-feature-button btn btn-primary">Try {{ feature_name }}</button>
+                    {% if feature_id != "water" %} <button type="submit" class="try-feature-button btn btn-primary">Try {{ feature_name }}</button> {% endif %}
                 </form>
             </div>
             <p class="feature-description-box">{{ feature_description }}</p>
