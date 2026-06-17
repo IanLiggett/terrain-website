@@ -1,6 +1,11 @@
 from django.db import models
 from django.contrib.auth.models import User
 
+def create_account_related_objects(user):
+    Profile.objects.create(user=user)
+    RiverSettings.objects.create(profile=user.profile)
+    FeatureSettings.objects.create(profile=user.profile)
+
 # Create your models here.
 class InputLayer(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
