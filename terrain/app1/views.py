@@ -4,7 +4,7 @@ from django.http import JsonResponse, HttpResponse
 from django.contrib.auth.decorators import login_required
 from django.template.loader import render_to_string
 from app1.forms import JoinForm, LoginForm, InputLayerForm, RiverSettingsForm, FeatureSettingsForm
-from app1.models import Profile, InputLayer, RiverSettings, FeatureSettings
+from app1.models import Profile, InputLayer, RiverSettings, FeatureSettings, create_account_related_objects
 from app1.presets import LAYER_PRESETS
 import requests
 from django.conf import settings
@@ -156,16 +156,14 @@ def join(request):
         join_form = JoinForm(request.POST)
         if (join_form.is_valid()):
             # Save form data to DB
-            user = join_form.save()
+            user = join_form.save(commit=False)
             # Encrypt the password
             user.set_password(user.password)
             # Save encrypted password to DB
             user.save()
 
             # Create user profile
-            Profile.objects.create(user=user)
-            RiverSettings.objects.create(profile=user.profile)
-            FeatureSettings.objects.create(profile=user.profile)
+            create_account_related_objects(user)
 
             # Success! Redirect to home page.
             return redirect("/")
